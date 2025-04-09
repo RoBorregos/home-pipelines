@@ -1,0 +1,234 @@
+[
+    {
+        "cmd_type": "goToLoc",
+        "string_cmd": "go to the office then find an apple and fetch it and give it to me",
+        "structured_cmd": [
+            "go(office)",
+            "find(apple)",
+            "pick(apple)",
+            "go(start_location)",
+            "give()"
+        ]
+    },
+    {
+        "cmd_type": "takeObjFromPlcmt",
+        "string_cmd": "take an apple from the bookshelf and bring it to Jane in the bedroom",
+        "structured_cmd": [
+            "go(bookshelf)",
+            "find(apple)",
+            "pick(apple)",
+            "go(bedroom)",
+            "find(Jane)",
+            "give()"
+        ]
+    },
+    {
+        "cmd_type": "findPrsInRoom",
+        "string_cmd": "locate a person raising their left arm in the office and take them to the dishwasher",
+        "structured_cmd": [
+            "go(office)",
+            "find(person raising their left arm)",
+            "escort_to(person, dishwasher)"
+        ]
+    },
+    {
+        "cmd_type": "findObjInRoom",
+        "string_cmd": "find a plate in the bedroom then fetch it and give it to the lying person in the bathroom",
+        "structured_cmd": [
+            "go(bedroom)",
+            "find(plate)",
+            "pick(plate)",
+            "go(bathroom)",
+            "find(lying person)",
+            "give()"
+        ]
+    },
+    {
+        "cmd_type": "meetPrsAtBeac",
+        "string_cmd": "meet Paris in the office and follow them to the side tables",
+        "structured_cmd": [
+            "go(office)",
+            "find(Paris)",
+            "follow_person_until(side tables)"
+        ]
+    },
+    {
+        "cmd_type": "countObjOnPlcmt",
+        "string_cmd": "tell me how many dishes there are on the desk",
+        "structured_cmd": [
+            "go(desk)",
+            "count(dishes)"
+        ]
+    },
+    {
+        "cmd_type": "countPrsInRoom",
+        "string_cmd": "tell me how many lying persons are in the office",
+        "structured_cmd": [
+            "go(office)",
+            "count(lying persons)"
+        ]
+    },
+    {
+        "cmd_type": "tellPrsInfoInLoc",
+        "string_cmd": "tell me the pose of the person at the exit",
+        "structured_cmd": [
+            "go(at the exit)",
+            "find(person)",
+            "visual_info(pose)",
+            "go(current_location)",
+            "say(saved_info)"
+        ]
+    },
+    {
+        "cmd_type": "tellObjPropOnPlcmt",
+        "string_cmd": "tell me what is the biggest object on the cabinet",
+        "structured_cmd": [
+            "go(cabinet)",
+            "visual_info(biggest)",
+            "go(current_location)",
+            "say(saved_info)"
+        ]
+    },
+    {
+        "cmd_type": "talkInfoToGestPrsInRoom",
+        "string_cmd": "tell the time to the person raising their left arm in the living room",
+        "structured_cmd": [
+            "go(living room)",
+            "find(person raising their left arm)",
+            "contextual_say(the time)"
+        ]
+    },
+    {
+        "cmd_type": "answerToGestPrsInRoom",
+        "string_cmd": "answer the question of the person pointing to the right in the bedroom",
+        "structured_cmd": [
+            "go(bedroom)",
+            "find(person pointing to the right)",
+            "say(introduction)",
+            "ask_question('Ask the question')",
+            "contextual_say(answer)"
+        ]
+    },
+    {
+        "cmd_type": "followNameFromBeacToRoom",
+        "string_cmd": "follow Paris from the armchair to the living room",
+        "structured_cmd": [
+            "go(armchair)",
+            "find(Paris)",
+            "say(intent)",
+            "follow_person_until(Paris, living room)"
+        ]
+    },
+    {
+        "cmd_type": "guideNameFromBeacToBeac",
+        "string_cmd": "lead Angel from the chairs to the bedroom",
+        "structured_cmd": [
+            "go(chairs)",
+            "find(Angel)",
+            "guide_to(Angel, bedroom)"
+        ]
+    },
+    {
+        "cmd_type": "guidePrsFromBeacToBeac",
+        "string_cmd": "escort the waving person_lying person from the refrigerator to the armchair",
+        "structured_cmd": [
+            "go(refrigerator)",
+            "find(waving person_lying person)",
+            "guide_to(person, armchair)"
+        ]
+    },
+    {
+        "cmd_type": "guideClothPrsFromBeacToBeac",
+        "string_cmd": "take the person wearing a blue shirt from the tv stand to the sink",
+        "structured_cmd": [
+            "go(tv stand)",
+            "find(blue shirt)",
+            "guide_to(person, sink)"
+        ]
+    },
+    {
+        "cmd_type": "bringMeObjFromPlcmt",
+        "string_cmd": "bring me a plum from the desk",
+        "structured_cmd": [
+            "go(desk)",
+            "find(plum)",
+            "pick(plum)",
+            "go(start_location)",
+            "give(plum)"
+        ]
+    },
+    {
+        "cmd_type": "tellCatPropOnPlcmt",
+        "string_cmd": "tell me what is the biggest fruit on the sink",
+        "structured_cmd": [
+            "go(sink)",
+            "visual_info(biggest, fruit)",
+            "go(current_location)",
+            "say(saved_info)"
+        ]
+    },
+    {
+        "cmd_type": "greetClothDscInRm",
+        "string_cmd": "introduce yourself to the person wearing a yellow sweater in the living room and answer a quiz",
+        "structured_cmd": [
+            "go(living room)",
+            "find(person with yellow sweater)",
+            "say(introduction)",
+            "ask_question('Ask the question')",
+            "contextual_say(answer)"
+        ]
+    },
+    {
+        "cmd_type": "greetNameInRm",
+        "string_cmd": "introduce yourself to Angel in the bathroom and follow them to the bedroom",
+        "structured_cmd": [
+            "go(bathroom)",
+            "find(Angel)",
+            "say(introduction)",
+            "follow_person_until(bedroom)"
+        ]
+    },
+    {
+        "cmd_type": "meetNameAtLocThenFindInRm",
+        "string_cmd": "meet Axel at the exit then look for them in the bathroom",
+        "structured_cmd": [
+            "go(exit)",
+            "find(Axel)",
+            "say(Hi Axel, I'll find you at bathroom)",
+            "go(bathroom)",
+            "find(Axel)",
+            "say(Hi Axel, nice to see you again!)"
+        ]
+    },
+    {
+        "cmd_type": "countClothPrsInRoom",
+        "string_cmd": "tell me how many people in the bedroom are wearing gray coats",
+        "structured_cmd": [
+            "go(bedroom)",
+            "count(person, gray coats)",
+            "go(start_location)",
+            "contextual_say(answer)"
+        ]
+    },
+    {
+        "cmd_type": "tellPrsInfoAtLocToPrsAtLoc",
+        "string_cmd": "tell the pose of the person at the desk to the person at the desk lamp",
+        "structured_cmd": [
+            "go(desk)",
+            "find(person)",
+            "visual_info(pose)",
+            "go(desk lamp)",
+            "find(person)",
+            "contextual_say(info)"
+        ]
+    },
+    {
+        "cmd_type": "followPrsAtLoc",
+        "string_cmd": "follow the standing person at the armchair",
+        "structured_cmd": [
+            "go(at the armchair)",
+            "find(standing person)",
+            "follow_person_until_canceled(person)"
+        ]
+    }
+]
