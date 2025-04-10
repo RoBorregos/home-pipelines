@@ -1,11 +1,18 @@
 import json
-import random
 import re
 import warnings
-import qrcode
-from PIL import Image, ImageDraw, ImageFont
 from gpsr_commands_structured import CommandGenerator
 
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class CommandShape(BaseModel):
+    action: str = Field(description="The action to be performed")
+    complement: Optional[str] = Field(description="A complement related to the action")
+    characteristic: Optional[str] = Field(description="A characteristic related to the action")
+
+class CommandListShape(BaseModel):
+    commands: List[CommandShape]
 
 def read_data(file_path):
     with open(file_path, 'r') as file:
@@ -79,6 +86,8 @@ if __name__ == "__main__":
     locations_file_path = '../maps/location_names.md'
     rooms_file_path = '../maps/room_names.md'
     objects_file_path = '../objects/test.md'
+    
+    PYDANTIC_JSON = False
 
     names_data = read_data(names_file_path)
     names = parse_names(names_data)
@@ -105,7 +114,11 @@ if __name__ == "__main__":
     for _ in range(command_amount):
         for index in range(len(generator.all_cmd_types)):
             string_cmd, structured_cmd = generator.generate_full_command(cmd_type=generator.all_cmd_types[index])
-            dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': structured_cmd})
+            if PYDANTIC_JSON:
+                json_commands = CommandListShape(commands=structured_cmd).model_dump_json()
+            else:
+                json_commands = [json.loads(c.model_dump_json()) for c in CommandListShape(commands=structured_cmd).commands]
+            dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': json_commands})
     
     # Save the dataset to a file
     with open('dataset.json', 'w') as f:
