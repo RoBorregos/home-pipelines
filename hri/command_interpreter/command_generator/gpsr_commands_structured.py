@@ -465,34 +465,34 @@ class CommandGenerator:
         cur_context = context[0]
         command = cur_context["cmd_type"]
         if command == "findObj":
-            return f"{cur_context["findVerb"]} {cur_context["art"]} {cur_context["obj_singCat"]} and " + \
+            return f"{cur_context['findVerb']} {cur_context['art']} {cur_context['obj_singCat']} and " + \
                              self.generate_command_followup(context[1:])
-        elif command == "findPrs":
-            return f"{cur_context["findVerb"]} the {cur_context["gestPers_posePers"]} and " + \
+        elif command == 'findPrs':
+            return f"{cur_context['findVerb']} the {cur_context['gestPers_posePers']} and " + \
                              self.generate_command_followup( context[1:])
-        elif command == "meetName":
-            return f"{cur_context["meetVerb"]} {cur_context["name"]} and " + \
+        elif command == 'meetName':
+            return f"{cur_context['meetVerb']} {cur_context['name']} and " + \
                              self.generate_command_followup(context[1:])
-        elif command == "placeObjOnPlcmt":
-            return f"{cur_context["placeVerb"]} it {cur_context["onLocPrep"]} the {cur_context["plcmtLoc2"]}"        
-        elif command == "deliverObjToMe":
-            return f"{cur_context["deliverVerb"]} it to me"
-        elif command == "deliverObjToPrsInRoom":
-            return f"{cur_context["deliverVerb"]} it {cur_context["deliverPrep"]} the {cur_context["gestPers_posePers"]} {cur_context["inLocPrep"]} the {cur_context["room"]}"
-        elif command == "deliverObjToNameAtBeac":
-            return f"{cur_context["deliverVerb"]} it {cur_context["deliverPrep"]} {cur_context["name"]} {cur_context["inLocPrep"]} the {cur_context["room"]}"
-        elif command == "talkInfo":
-            return f"{cur_context["talkVerb"]} {cur_context["talk"]}"
-        elif command == "answerQuestion":
-            return f"{cur_context["answerVerb"]} a {cur_context["question"]}"
-        elif command == "followPrs":
-            return f"{cur_context["followVerb"]} them"
-        elif command == "followPrsToRoom":
-            return f"{cur_context["followVerb"]} them {cur_context["toLocPrep"]} the {cur_context["loc2_room2"]}"
-        elif command == "guidePrsToBeacon":
-            return f"{cur_context["guideVerb"]} them {cur_context["toLocPrep"]} the {cur_context["loc2_room2"]}"
-        elif command == "takeObj":
-            return f"{cur_context["takeVerb"]} it and " + \
+        elif command == 'placeObjOnPlcmt':
+            return f"{cur_context['placeVerb']} it {cur_context['onLocPrep']} the {cur_context['plcmtLoc2']}"
+        elif command == 'deliverObjToMe':
+            return f"{cur_context['deliverVerb']} it to me"
+        elif command == 'deliverObjToPrsInRoom':
+            return f"{cur_context['deliverVerb']} it {cur_context['deliverPrep']} the {cur_context['gestPers_posePers']} {cur_context['inLocPrep']} the {cur_context['room']}"
+        elif command == 'deliverObjToNameAtBeac':
+            return f"{cur_context['deliverVerb']} it {cur_context['deliverPrep']} {cur_context['name']} {cur_context['inLocPrep']} the {cur_context['room']}"
+        elif command == 'talkInfo':
+            return f"{cur_context['talkVerb']} {cur_context['talk']}"
+        elif command == 'answerQuestion':
+            return f"{cur_context['answerVerb']} a {cur_context['question']}"
+        elif command == 'followPrs':
+            return f"{cur_context['followVerb']} them"
+        elif command == 'followPrsToRoom':
+            return f"{cur_context['followVerb']} them {cur_context['toLocPrep']} the {cur_context['loc2_room2']}"
+        elif command == 'guidePrsToBeacon':
+            return f"{cur_context['guideVerb']} them {cur_context['toLocPrep']} the {cur_context['loc2_room2']}"
+        elif command == 'takeObj':
+            return f"{cur_context['takeVerb']} it and " + \
                              self.generate_command_followup(context[1:])
         else:
             warnings.warn("Command type not covered: " + command)
