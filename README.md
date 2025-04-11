@@ -4,21 +4,6 @@
 
 Jupyter notebooks pipelines for the @home competition.
 
-## Installation
-
-1. Clone the project repository on your local machine.
-
-   SSH:
-
-   ```bash
-   $ git clone --recurse-submodules https://github.com/RoBorregos/
-   ```
-
-## Usage
-
-How to use the project after installation.
-Pictures of the project working.
-
 ## Development team
 
 | Name               | Email                                       | Github                                 | Role                      |
