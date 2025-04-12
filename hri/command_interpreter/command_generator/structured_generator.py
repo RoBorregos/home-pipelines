@@ -87,7 +87,7 @@ if __name__ == "__main__":
     rooms_file_path = '../maps/room_names.md'
     objects_file_path = '../objects/test.md'
     
-    PYDANTIC_JSON = False
+    PYDANTIC_JSON = True
 
     names_data = read_data(names_file_path)
     names = parse_names(names_data)
