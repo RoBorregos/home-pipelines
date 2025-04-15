@@ -511,110 +511,113 @@ class CommandGenerator:
             steps.append({"action": "go", "complement": cur_context['loc_room'], "characteristic": ""})
         elif ct == "takeObjFromPlcmt":
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['obj_singCat'], "characteristic": ""})
+            steps.append({"action": "find_object", "complement": cur_context['plcmtLoc'], "characteristic": cur_context['obj_singCat']})
             steps.append({"action": "pick", "complement": cur_context['obj_singCat'], "characteristic": ""})
         elif ct == "findPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
         elif ct == "findObjInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['obj_singCat'], "characteristic": ""})
+            steps.append({"action": "find_object", "complement": cur_context['room'], "characteristic": cur_context['obj_singCat']})
         elif ct == "meetPrsAtBeac":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
         elif ct == "countObjOnPlcmt":
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
-            steps.append({"action": "count", "complement": cur_context['plurCat'], "characteristic": ""})
+            steps.append({"action": "count", "complement": cur_context['plcmtLoc'], "characteristic": cur_context['plurCat']})
             steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": 'saved_info', "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "countPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "count", "complement": cur_context['gestPersPlur_posePersPlur'], "characteristic": ""})
+            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": 'person with ' + cur_context['gestPersPlur_posePersPlur']})
             steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": 'saved_info', "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "tellPrsInfoInLoc":
             steps.append({"action": "go", "complement": cur_context['inRoom_atLoc'].split("the ", 1)[-1], "characteristic": ""})
-            steps.append({"action": "find", "complement": 'person', "characteristic": ""})
-            steps.append({"action": "visual_info", "complement": cur_context['persInfo'], "characteristic": ""})
-            steps.append({"action": "go", "complement": 'current_location', "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": 'saved_info', "characteristic": ""})
+            steps.append({"action": "find_person", "complement": '', "characteristic": ""})
+            steps.append({"action": "find_person_info", "complement": cur_context['persInfo'], "characteristic": ""})
+            steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "find_person_info"})
         elif ct == "tellObjPropOnPlcmt": 
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
             steps.append({"action": "visual_info", "complement": cur_context['objComp'], "characteristic": ""})
-            steps.append({"action": "go", "complement": 'current_location', "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": 'saved_info', "characteristic": ""})
+            steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "visual_info"})
         elif ct == "talkInfoToGestPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers'], "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": cur_context['talk'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement":  self.sub_art(self.generate_command_string(context)), "characteristic": cur_context['talk']})
         elif ct == "answerToGestPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": ""})
             steps.append({"action": "ask_answer_question", "complement": '', "characteristic": ""})
         elif ct == "followNameFromBeacToRoom":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
-            steps.append({"action": "follow_person_until", "complement": cur_context['name'], "characteristic": cur_context['room']})            
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "follow_person_until", "complement": cur_context['room'], "characteristic": cur_context['name']})            
         elif ct == "guideNameFromBeacToBeac":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
             steps.append({"action": "guide_to", "complement": cur_context['name'], "characteristic": cur_context['loc_room']})
+            
         elif ct == "guidePrsFromBeacToBeac":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            # TODO: specify characteristic (gesture, pose, colorclothe)
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            #guide_to -> say + go
             steps.append({"action": "guide_to", "complement": "person", "characteristic": cur_context['loc_room']})
         elif ct == "guideClothPrsFromBeacToBeac":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['colorClothe'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['colorClothe'], "characteristic": "clothes"})
             steps.append({"action": "guide_to", "complement": "person", "characteristic": cur_context['loc_room']})
         elif ct == "bringMeObjFromPlcmt":
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['obj'], "characteristic": ""})
+            steps.append({"action": "find_object", "complement": cur_context['plcmtLoc'], "characteristic": cur_context['obj']})
             steps.append({"action": "pick", "complement": cur_context['obj'], "characteristic": ""})
             steps.append({"action": "go", "complement": "start_location", "characteristic": ""})
-            steps.append({"action": "give", "complement": cur_context['obj'], "characteristic": ""})
+            steps.append({"action": "give", "complement": '', "characteristic": ""})
         elif ct == "tellCatPropOnPlcmt":
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
             steps.append({"action": "visual_info", "complement": cur_context['objComp'], "characteristic": cur_context['singCat']})
             steps.append({"action": "go", "complement": "start_location", "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": "saved_info", "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "visual_info"})
         elif ct == "greetClothDscInRm":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": f"person with {cur_context['colorClothe']}", "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": "introduction", "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['colorClothe'], "characteristic": "clothes"})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "introduction"})
         elif ct == "greetNameInRm":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": "introduction", "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "introduction"})
         elif ct == "meetNameAtLocThenFindInRm":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
             steps.append({"action": "say", "complement": f"Hi {cur_context['name']}, I'll find you at {cur_context['room']}", "characteristic": ""})
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
             steps.append({"action": "say", "complement": f"Hi {cur_context['name']}, nice to see you again!", "characteristic": ""})
         elif ct == "countClothPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "count", "complement": "person", "characteristic": cur_context['colorClothes']})
+            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": f"person with {cur_context['colorClothes']}"})
             steps.append({"action": "go", "complement": "start_location", "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": "saved_info", "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "tellPrsInfoAtLocToPrsAtLoc":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            steps.append({"action": "find", "complement": "person", "characteristic": ""})
-            steps.append({"action": "visual_info", "complement": cur_context['persInfo'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": "", "characteristic": ""})
+            steps.append({"action": "find_person_info", "complement": cur_context['persInfo'], "characteristic": ""})
             steps.append({"action": "go", "complement": cur_context['loc2'], "characteristic": ""})
-            steps.append({"action": "find", "complement": "person", "characteristic": ""})
-            steps.append({"action": "contextual_say", "complement": "saved_info", "characteristic": ""})
+            steps.append({"action": "find_person", "complement": "", "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "find_person_info"})
         elif ct == "followPrsAtLoc":
             steps.append({"action": "go", "complement": cur_context['inRoom_atLoc'].split("the ", 1)[-1], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
             steps.append({"action": "follow_person_until", "complement": "canceled", "characteristic": ""})
         elif ct == "findObj":
-            steps.append({"action": "find", "complement": cur_context['obj_singCat'], "characteristic": ""})
+            steps.append({"action": "find_object", "complement": self.find_in_context('loc_room', context, context_index-1), "characteristic":  cur_context['obj_singCat']})
         elif ct == "findPrs":
-            steps.append({"action": "find", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
         elif ct == "meetName":
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
         elif ct == "placeObjOnPlcmt":
             steps.append({"action": "go", "complement": cur_context['plcmtLoc2'], "characteristic": ""})
             steps.append({"action": "place", "complement": "", "characteristic": ""})
@@ -622,20 +625,20 @@ class CommandGenerator:
             steps.append({"action": "give", "complement": "", "characteristic": ""})
         elif ct == "deliverObjToPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
             steps.append({"action": "give", "complement": "", "characteristic": ""})
         elif ct == "deliverObjToNameAtBeac":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find", "complement": cur_context['name'], "characteristic": ""})
+            steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
             steps.append({"action": "give", "complement": "", "characteristic": ""})
         elif ct == "talkInfo":
-            steps.append({"action": "contextual_say", "complement": cur_context['talk'], "characteristic": ""})
+            steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": cur_context['talk']})
         elif ct == "answerQuestion":
             steps.append({"action": "ask_answer_question", "complement": '', "characteristic": ""})
         elif ct == "followPrs":
             steps.append({"action": "follow_person_until", "complement": "canceled", "characteristic": ""})
         elif ct == "followPrsToRoom":
-            steps.append({"action": "follow_person_until", "complement": cur_context['loc2_room2'], "characteristic": ""})
+            steps.append({"action": "follow_person_until", "complement": cur_context['loc2_room2'], "characteristic": ''})
         elif ct == "guidePrsToBeacon":
             steps.append({"action": "guide_to", "complement": 'person', "characteristic": cur_context['loc2_room2']})
         elif ct == "takeObj":
