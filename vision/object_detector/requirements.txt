@@ -1,0 +1,12 @@
+numpy
+opencv-python
+pillow
+pycocotools
+pyyaml
+torch
+ultralytics
+matplotlib
+imutils
+argparse
+groundingdino-py
+segment-anything
