@@ -1,0 +1,16 @@
+services:
+  train-yolo:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        BASE_IMAGE: pytorch/pytorch:latest
+    container_name: home2-vision-yolo
+    image: roborregos/home2:vision-yolo
+    volumes:
+      - ./notebooks:/workspace/notebooks
+      - ./content:/content
+    ports:
+      - "8888:8888"
+    runtime: nvidia
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root

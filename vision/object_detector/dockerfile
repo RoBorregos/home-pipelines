@@ -1,6 +1,7 @@
-FROM pytorch/pytorch:latest
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
-WORKDIR /workspace
+WORKDIR /content
 
 COPY requirements.txt .
 
