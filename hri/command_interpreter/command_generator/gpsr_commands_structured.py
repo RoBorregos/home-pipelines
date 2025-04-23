@@ -529,7 +529,7 @@ class CommandGenerator:
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "countPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": 'person with ' + cur_context['gestPersPlur_posePersPlur']})
+            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": cur_context['gestPersPlur_posePersPlur']})
             steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "tellPrsInfoInLoc":
@@ -598,7 +598,7 @@ class CommandGenerator:
             steps.append({"action": "say", "complement": f"Hi {cur_context['name']}, nice to see you again!", "characteristic": ""})
         elif ct == "countClothPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": f"person with {cur_context['colorClothes']}"})
+            steps.append({"action": "count", "complement": cur_context['room'], "characteristic": f"people wearing {cur_context['colorClothes']}"})
             steps.append({"action": "go", "complement": "start_location", "characteristic": ""})
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "count"})
         elif ct == "tellPrsInfoAtLocToPrsAtLoc":
