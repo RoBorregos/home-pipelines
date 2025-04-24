@@ -13,3 +13,9 @@ Jupyter notebooks pipelines for the @home competition.
 ## License
 
 License used.
+
+## Ports used
+
+### HRI
+
+- command_interpreter: 8889

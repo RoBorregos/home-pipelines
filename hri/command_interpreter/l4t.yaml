@@ -1,0 +1,18 @@
+services:
+  train-cmd-interpreter:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        BASE_IMAGE: dustynv/l4t-pytorch:r36.4.0
+    container_name: home2-hri-cmd-interpreter
+    image: roborregos/home2:hri-cmd-interpreter
+    volumes:
+      - ./notebooks:/content/notebooks
+      - ./content:/content
+    ports:
+      - "8889:8889"
+    network_mode: host
+    runtime: nvidia
+    # shm_size: 40g
+    command: jupyter notebook --ip=0.0.0.0 --port=8889 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
