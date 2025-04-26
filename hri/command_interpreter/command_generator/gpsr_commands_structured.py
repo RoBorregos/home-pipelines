@@ -515,7 +515,8 @@ class CommandGenerator:
             steps.append({"action": "pick", "complement": cur_context['obj_singCat'], "characteristic": ""})
         elif ct == "findPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            charcteristic = "gesture" if cur_context['gestPers_posePers'] in self.gesture_person_list else "pose"
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": charcteristic})
         elif ct == "findObjInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
             steps.append({"action": "find_object", "complement": cur_context['room'], "characteristic": cur_context['obj_singCat']})
@@ -540,16 +541,16 @@ class CommandGenerator:
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "find_person_info"})
         elif ct == "tellObjPropOnPlcmt": 
             steps.append({"action": "go", "complement": cur_context['plcmtLoc'], "characteristic": ""})
-            steps.append({"action": "visual_info", "complement": cur_context['objComp'], "characteristic": ""})
+            steps.append({"action": "visual_info", "complement": cur_context['objComp'], "characteristic": "object"})
             steps.append({"action": "go", "complement": 'start_location', "characteristic": ""})
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "visual_info"})
         elif ct == "talkInfoToGestPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": "gesture"})
             steps.append({"action": "contextual_say", "complement":  self.sub_art(self.generate_command_string(context)), "characteristic": cur_context['talk']})
         elif ct == "answerToGestPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": ""})
+            steps.append({"action": "find_person", "complement": cur_context['gestPers'], "characteristic": "gesture"})
             steps.append({"action": "ask_answer_question", "complement": '', "characteristic": ""})
         elif ct == "followNameFromBeacToRoom":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
@@ -562,9 +563,8 @@ class CommandGenerator:
             
         elif ct == "guidePrsFromBeacToBeac":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
-            # TODO: specify characteristic (gesture, pose, colorclothe)
-            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
-            #guide_to -> say + go
+            charcteristic = "gesture" if cur_context['gestPers_posePers'] in self.gesture_person_list else "pose"
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": charcteristic})
             steps.append({"action": "guide_to", "complement": "person", "characteristic": cur_context['loc_room']})
         elif ct == "guideClothPrsFromBeacToBeac":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
@@ -610,12 +610,14 @@ class CommandGenerator:
             steps.append({"action": "contextual_say", "complement": self.sub_art(self.generate_command_string(context)), "characteristic": "find_person_info"})
         elif ct == "followPrsAtLoc":
             steps.append({"action": "go", "complement": cur_context['inRoom_atLoc'].split("the ", 1)[-1], "characteristic": ""})
-            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            charcteristic = "gesture" if cur_context['gestPers_posePers'] in self.gesture_person_list else "pose"
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": charcteristic})
             steps.append({"action": "follow_person_until", "complement": "canceled", "characteristic": ""})
         elif ct == "findObj":
             steps.append({"action": "find_object", "complement": self.find_in_context('loc_room', context, context_index-1), "characteristic":  cur_context['obj_singCat']})
         elif ct == "findPrs":
-            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            charcteristic = "gesture" if cur_context['gestPers_posePers'] in self.gesture_person_list else "pose"
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": charcteristic})
         elif ct == "meetName":
             steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
         elif ct == "placeObjOnPlcmt":
@@ -625,7 +627,8 @@ class CommandGenerator:
             steps.append({"action": "give", "complement": "", "characteristic": ""})
         elif ct == "deliverObjToPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
-            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": ""})
+            charcteristic = "gesture" if cur_context['gestPers_posePers'] in self.gesture_person_list else "pose"
+            steps.append({"action": "find_person", "complement": cur_context['gestPers_posePers'], "characteristic": charcteristic})
             steps.append({"action": "give", "complement": "", "characteristic": ""})
         elif ct == "deliverObjToNameAtBeac":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
