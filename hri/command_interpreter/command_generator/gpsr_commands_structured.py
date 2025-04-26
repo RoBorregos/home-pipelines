@@ -592,10 +592,8 @@ class CommandGenerator:
         elif ct == "meetNameAtLocThenFindInRm":
             steps.append({"action": "go", "complement": cur_context['loc'], "characteristic": ""})
             steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
-            steps.append({"action": "say", "complement": f"Hi {cur_context['name']}, I'll find you at {cur_context['room']}", "characteristic": ""})
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
             steps.append({"action": "find_person_by_name", "complement": cur_context['name'], "characteristic": ""})
-            steps.append({"action": "say", "complement": f"Hi {cur_context['name']}, nice to see you again!", "characteristic": ""})
         elif ct == "countClothPrsInRoom":
             steps.append({"action": "go", "complement": cur_context['room'], "characteristic": ""})
             steps.append({"action": "count", "complement": cur_context['room'], "characteristic": f"people wearing {cur_context['colorClothes']}"})
