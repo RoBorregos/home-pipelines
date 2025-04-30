@@ -88,7 +88,7 @@ if __name__ == "__main__":
     objects_file_path = '../objects/test.md'
     
     PYDANTIC_JSON = True
-
+    NEW_FORMAT = True
     names_data = read_data(names_file_path)
     names = parse_names(names_data)
 
@@ -114,11 +114,25 @@ if __name__ == "__main__":
     for _ in range(command_amount):
         for index in range(len(generator.all_cmd_types)):
             string_cmd, structured_cmd = generator.generate_full_command(cmd_type=generator.all_cmd_types[index])
-            if PYDANTIC_JSON:
-                json_commands = CommandListShape(commands=structured_cmd).model_dump_json()
+            if NEW_FORMAT:
+                formated_cmd = None
+                formatted_structured_cmd = []
+                for command in structured_cmd:
+                    obj = {}
+                    for k, v in command.items():
+                        if k == 'action':
+                            action = v
+                            continue
+                        obj[k] = v
+                    formated_cmd = {command['action']: obj}
+                    formatted_structured_cmd.append(formated_cmd)
+                dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': formatted_structured_cmd})
             else:
-                json_commands = [json.loads(c.model_dump_json()) for c in CommandListShape(commands=structured_cmd).commands]
-            dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': json_commands})
+                if PYDANTIC_JSON:
+                    json_commands = CommandListShape(commands=structured_cmd).model_dump_json()
+                else:
+                    json_commands = [json.loads(c.model_dump_json()) for c in CommandListShape(commands=structured_cmd).commands]
+                dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': json_commands})
     
     # Save the dataset to a file
     with open('dataset.json', 'w') as f:
