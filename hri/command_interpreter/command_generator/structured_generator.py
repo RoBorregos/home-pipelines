@@ -115,18 +115,18 @@ if __name__ == "__main__":
         for index in range(len(generator.all_cmd_types)):
             string_cmd, structured_cmd = generator.generate_full_command(cmd_type=generator.all_cmd_types[index])
             if NEW_FORMAT:
-                formated_cmd = None
-                formatted_structured_cmd = []
-                for command in structured_cmd:
-                    obj = {}
-                    for k, v in command.items():
-                        if k == 'action':
-                            action = v
-                            continue
-                        obj[k] = v
-                    formated_cmd = {command['action']: obj}
-                    formatted_structured_cmd.append(formated_cmd)
-                dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': formatted_structured_cmd})
+                # formated_cmd = None
+                # formatted_structured_cmd = []
+                # for command in structured_cmd:
+                #     obj = {}
+                #     for k, v in command.items():
+                #         if k == 'action':
+                #             action = v
+                #             continue
+                #         obj[k] = v
+                #     formated_cmd = {command['action']: obj}
+                #     formatted_structured_cmd.append(formated_cmd)
+                dataset.append({'cmd_type': generator.all_cmd_types[index], 'string_cmd': string_cmd, 'structured_cmd': structured_cmd})
             else:
                 if PYDANTIC_JSON:
                     json_commands = CommandListShape(commands=structured_cmd).model_dump_json()
