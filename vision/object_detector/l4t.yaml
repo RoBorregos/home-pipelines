@@ -15,4 +15,4 @@ services:
     network_mode: host
     runtime: nvidia
     shm_size: 16g
-    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
