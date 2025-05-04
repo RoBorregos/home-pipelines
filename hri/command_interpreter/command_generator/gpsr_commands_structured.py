@@ -619,6 +619,7 @@ class CommandGenerator:
             steps.append({"action": "go_to", "location_to_go": cur_context['plcmtLoc2']})
             steps.append({"action": "place_object"}) 
         elif ct == "deliverObjToMe":
+            steps.append({"action": "go_to", "location_to_go": "start_location"})
             steps.append({"action": "give_object"})
         elif ct == "deliverObjToPrsInRoom":
             steps.append({"action": "go_to", "location_to_go": cur_context['room']})
