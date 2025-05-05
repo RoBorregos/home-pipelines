@@ -1,0 +1,9 @@
+services:
+  finetuner:
+    container_name: finetuner
+    image: cuda-py311-tuner
+    runtime: nvidia
+    volumes:
+      - ./model:/app/model
+    stdin_open: true
+    tty: true
