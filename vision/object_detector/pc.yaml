@@ -1,3 +1,7 @@
+networks:
+  yolo-home-net:
+    name: yolo-home-net
+
 services:
   train-yolo:
     build:
@@ -8,9 +12,12 @@ services:
     container_name: home2-vision-yolo
     image: roborregos/home2:vision-yolo
     volumes:
-      - ./notebooks:/workspace/notebooks
+      - ./notebooks:/content/notebooks
       - ./content:/content
     ports:
       - "8888:8888"
     runtime: nvidia
+    shm_size: 32gb
     command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    networks:
+      - yolo-home-net
