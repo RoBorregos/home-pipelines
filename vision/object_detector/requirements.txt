@@ -10,3 +10,4 @@ imutils
 argparse
 groundingdino-py
 segment-anything
+ipywidgets
