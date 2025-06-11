@@ -1,0 +1,15 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+WORKDIR /content
+
+COPY requirements.txt .
+
+RUN pip install jupyter jupyterlab
+RUN pip install -r requirements.txt
+
+RUN apt update && apt install -y \
+    libgl1 libglib2.0-0 git wget \
+    && rm -rf /var/lib/apt/lists/*
+
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
