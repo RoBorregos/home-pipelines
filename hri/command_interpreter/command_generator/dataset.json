@@ -1,859 +1,225 @@
 [
     {
         "cmd_type": "goToLoc",
-        "string_cmd": "navigate to the living room then locate a snack and grasp it and bring it to me",
+        "string_cmd": "navigate to the bathroom then locate a fork and get it and place it on the storage rack",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bathroom"
             },
             {
-                "action": "find",
-                "complement": "snack",
-                "characteristic": ""
+                "action": "pick_object",
+                "object_to_pick": "fork"
             },
             {
-                "action": "pick",
-                "complement": "snack",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "storage rack"
             },
             {
-                "action": "give",
-                "complement": "",
-                "characteristic": ""
+                "action": "place_object"
             }
         ]
     },
     {
         "cmd_type": "takeObjFromPlcmt",
-        "string_cmd": "get a toy from the tv stand and bring it to me",
+        "string_cmd": "grasp an orange from the dishwasher and deliver it to the waving person in the office",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "tv stand",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "dishwasher"
             },
             {
-                "action": "find",
-                "complement": "toy",
-                "characteristic": ""
+                "action": "pick_object",
+                "object_to_pick": "orange"
             },
             {
-                "action": "pick",
-                "complement": "toy",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "office"
             },
             {
-                "action": "give",
-                "complement": "",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "waving person"
+            },
+            {
+                "action": "give_object"
             }
         ]
     },
     {
         "cmd_type": "findPrsInRoom",
-        "string_cmd": "find a waving person in the office and answer a question",
+        "string_cmd": "locate a person raising their left arm in the kitchen and say the time",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "office",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen"
             },
             {
-                "action": "find",
-                "complement": "waving person",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "person raising their left arm"
             },
             {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "locate a person raising their left arm in the kitchen and say the time",
+                "previous_command_info": "the time"
             }
         ]
     },
     {
         "cmd_type": "findObjInRoom",
-        "string_cmd": "locate a spoon in the living room then get it and give it to the person raising their left arm in the kitchen",
+        "string_cmd": "look for a rubiks cube in the kitchen then take it and deliver it to the standing person in the office",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen"
             },
             {
-                "action": "find",
-                "complement": "spoon",
-                "characteristic": ""
+                "action": "pick_object",
+                "object_to_pick": "rubiks cube"
             },
             {
-                "action": "pick",
-                "complement": "spoon",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "office"
             },
             {
-                "action": "go",
-                "complement": "kitchen",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "standing person"
             },
             {
-                "action": "find",
-                "complement": "person raising their left arm",
-                "characteristic": ""
-            },
-            {
-                "action": "give",
-                "complement": "",
-                "characteristic": ""
+                "action": "give_object"
             }
         ]
     },
     {
         "cmd_type": "meetPrsAtBeac",
-        "string_cmd": "meet Simone in the living room and answer a question",
+        "string_cmd": "meet Charlie in the bathroom and follow them",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bathroom"
             },
             {
-                "action": "find",
-                "complement": "Simone",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Charlie"
             },
             {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
+                "action": "follow_person_until",
+                "destination": "canceled"
             }
         ]
     },
     {
         "cmd_type": "countObjOnPlcmt",
-        "string_cmd": "tell me how many foods there are on the tv stand",
+        "string_cmd": "tell me how many dishes there are on the refrigerator",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "tv stand",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "refrigerator"
             },
             {
                 "action": "count",
-                "complement": "foods",
-                "characteristic": ""
+                "target_to_count": "dishes"
             },
             {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me how many dishes there are on the refrigerator",
+                "previous_command_info": "count"
             }
         ]
     },
     {
         "cmd_type": "countPrsInRoom",
-        "string_cmd": "tell me how many persons raising their left arm are in the bathroom",
+        "string_cmd": "tell me how many persons pointing to the left are in the bedroom",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "bathroom",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bedroom"
             },
             {
                 "action": "count",
-                "complement": "persons raising their left arm",
-                "characteristic": ""
+                "target_to_count": "persons pointing to the left"
             },
             {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me how many persons pointing to the left are in the bedroom",
+                "previous_command_info": "count"
             }
         ]
     },
     {
         "cmd_type": "tellPrsInfoInLoc",
-        "string_cmd": "tell me the gesture of the person in the bedroom",
+        "string_cmd": "tell me the name of the person at the bookshelf",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "bedroom",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bookshelf"
             },
             {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": ""
             },
             {
-                "action": "visual_info",
-                "complement": "gesture",
-                "characteristic": ""
+                "action": "get_person_info",
+                "info_type": "name"
             },
             {
-                "action": "go",
-                "complement": "current_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me the name of the person at the bookshelf",
+                "previous_command_info": "get_person_info"
             }
         ]
     },
     {
         "cmd_type": "tellObjPropOnPlcmt",
-        "string_cmd": "tell me what is the largest object on the storage rack",
+        "string_cmd": "tell me what is the lightest object on the dishwasher",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "storage rack",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "dishwasher"
             },
             {
-                "action": "visual_info",
-                "complement": "largest",
-                "characteristic": ""
+                "action": "get_visual_info",
+                "measure": "lightest",
+                "object_category": "object"
             },
             {
-                "action": "go",
-                "complement": "current_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me what is the lightest object on the dishwasher",
+                "previous_command_info": "get_visual_info"
             }
         ]
     },
     {
         "cmd_type": "talkInfoToGestPrsInRoom",
-        "string_cmd": "say what day is today to the person pointing to the left in the bathroom",
+        "string_cmd": "tell your teams name to the person raising their left arm in the office",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "bathroom",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "office"
             },
             {
-                "action": "find",
-                "complement": "person pointing to the left",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "person raising their left arm"
             },
             {
-                "action": "contextual_say",
-                "complement": "what day is today",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "answerToGestPrsInRoom",
-        "string_cmd": "answer the question of the person pointing to the left in the office",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "office",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person pointing to the left",
-                "characteristic": ""
-            },
-            {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "followNameFromBeacToRoom",
-        "string_cmd": "follow Jane from the refrigerator to the office",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "refrigerator",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Jane",
-                "characteristic": ""
-            },
-            {
-                "action": "follow_person_until",
-                "complement": "Jane",
-                "characteristic": "office"
-            }
-        ]
-    },
-    {
-        "cmd_type": "guideNameFromBeacToBeac",
-        "string_cmd": "escort Jane from the lamp to the exit",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "lamp",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Jane",
-                "characteristic": ""
-            },
-            {
-                "action": "guide_to",
-                "complement": "Jane",
-                "characteristic": "exit"
-            }
-        ]
-    },
-    {
-        "cmd_type": "guidePrsFromBeacToBeac",
-        "string_cmd": "lead the person raising their right arm from the sofa to the tv stand",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "sofa",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person raising their right arm",
-                "characteristic": ""
-            },
-            {
-                "action": "guide_to",
-                "complement": "person",
-                "characteristic": "tv stand"
-            }
-        ]
-    },
-    {
-        "cmd_type": "guideClothPrsFromBeacToBeac",
-        "string_cmd": "escort the person wearing a blue coat from the bookshelf to the bathroom",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bookshelf",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "blue coat",
-                "characteristic": ""
-            },
-            {
-                "action": "guide_to",
-                "complement": "person",
-                "characteristic": "bathroom"
-            }
-        ]
-    },
-    {
-        "cmd_type": "bringMeObjFromPlcmt",
-        "string_cmd": "bring me a banana from the shelf",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "shelf",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "banana",
-                "characteristic": ""
-            },
-            {
-                "action": "pick",
-                "complement": "banana",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "give",
-                "complement": "banana",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "tellCatPropOnPlcmt",
-        "string_cmd": "tell me what is the smallest toy on the bookshelf",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bookshelf",
-                "characteristic": ""
-            },
-            {
-                "action": "visual_info",
-                "complement": "smallest",
-                "characteristic": "toy"
-            },
-            {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "greetClothDscInRm",
-        "string_cmd": "greet the person wearing a red blouse in the living room and tell something about yourself",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person with red blouse",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "introduction",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "something about yourself",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "greetNameInRm",
-        "string_cmd": "say hello to Robin in the office and tell what day is today",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "office",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Robin",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "introduction",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "what day is today",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "meetNameAtLocThenFindInRm",
-        "string_cmd": "meet Robin at the tv stand then look for them in the bathroom",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "tv stand",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Robin",
-                "characteristic": ""
-            },
-            {
-                "action": "say",
-                "complement": "Hi Robin, I'll find you at bathroom",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "bathroom",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Robin",
-                "characteristic": ""
-            },
-            {
-                "action": "say",
-                "complement": "Hi Robin, nice to see you again!",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "countClothPrsInRoom",
-        "string_cmd": "tell me how many people in the kitchen are wearing black t shirts",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "kitchen",
-                "characteristic": ""
-            },
-            {
-                "action": "count",
-                "complement": "person",
-                "characteristic": "black t shirts"
-            },
-            {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "tellPrsInfoAtLocToPrsAtLoc",
-        "string_cmd": "tell the pose of the person at the bookshelf to the person at the chairs",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bookshelf",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
-            },
-            {
-                "action": "visual_info",
-                "complement": "pose",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "chairs",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "followPrsAtLoc",
-        "string_cmd": "follow the person raising their right arm at the potted plant",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "potted plant",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person raising their right arm",
-                "characteristic": ""
-            },
-            {
-                "action": "follow_person_until",
-                "complement": "canceled",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "goToLoc",
-        "string_cmd": "navigate to the bedroom then find a snack and get it and put it on the cabinet",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bedroom",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "snack",
-                "characteristic": ""
-            },
-            {
-                "action": "pick",
-                "complement": "snack",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "cabinet",
-                "characteristic": ""
-            },
-            {
-                "action": "place",
-                "complement": "",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "takeObjFromPlcmt",
-        "string_cmd": "get a lemon from the shelf and deliver it to me",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "shelf",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "lemon",
-                "characteristic": ""
-            },
-            {
-                "action": "pick",
-                "complement": "lemon",
-                "characteristic": ""
-            },
-            {
-                "action": "give",
-                "complement": "",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "findPrsInRoom",
-        "string_cmd": "find a person raising their right arm in the living room and follow them",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person raising their right arm",
-                "characteristic": ""
-            },
-            {
-                "action": "follow_person_until",
-                "complement": "canceled",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "findObjInRoom",
-        "string_cmd": "find a food in the bedroom then grasp it and bring it to Charlie in the living room",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bedroom",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "food",
-                "characteristic": ""
-            },
-            {
-                "action": "pick",
-                "complement": "food",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Charlie",
-                "characteristic": ""
-            },
-            {
-                "action": "give",
-                "complement": "",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "meetPrsAtBeac",
-        "string_cmd": "meet Robin in the bedroom and follow them",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bedroom",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Robin",
-                "characteristic": ""
-            },
-            {
-                "action": "follow_person_until",
-                "complement": "canceled",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "countObjOnPlcmt",
-        "string_cmd": "tell me how many toys there are on the dishwasher",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "dishwasher",
-                "characteristic": ""
-            },
-            {
-                "action": "count",
-                "complement": "toys",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "countPrsInRoom",
-        "string_cmd": "tell me how many lying persons are in the bedroom",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bedroom",
-                "characteristic": ""
-            },
-            {
-                "action": "count",
-                "complement": "lying persons",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "tellPrsInfoInLoc",
-        "string_cmd": "tell me the name of the person at the tv stand",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "tv stand",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
-            },
-            {
-                "action": "visual_info",
-                "complement": "name",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "current_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "tellObjPropOnPlcmt",
-        "string_cmd": "tell me what is the largest object on the bookshelf",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bookshelf",
-                "characteristic": ""
-            },
-            {
-                "action": "visual_info",
-                "complement": "largest",
-                "characteristic": ""
-            },
-            {
-                "action": "go",
-                "complement": "current_location",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
-            }
-        ]
-    },
-    {
-        "cmd_type": "talkInfoToGestPrsInRoom",
-        "string_cmd": "say your teams name to the waving person in the bathroom",
-        "structured_cmd": [
-            {
-                "action": "go",
-                "complement": "bathroom",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "waving person",
-                "characteristic": ""
-            },
-            {
-                "action": "contextual_say",
-                "complement": "your teams name",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell your teams name to the person raising their left arm in the office",
+                "previous_command_info": "your teams name"
             }
         ]
     },
@@ -862,331 +228,765 @@
         "string_cmd": "answer the question of the person raising their right arm in the kitchen",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "kitchen",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen"
             },
             {
-                "action": "find",
-                "complement": "person raising their right arm",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "person raising their right arm"
             },
             {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
+                "action": "answer_question"
             }
         ]
     },
     {
         "cmd_type": "followNameFromBeacToRoom",
-        "string_cmd": "follow Jane from the potted plant to the bathroom",
+        "string_cmd": "follow Axel from the bookshelf to the office",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "potted plant",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bookshelf"
             },
             {
-                "action": "find",
-                "complement": "Jane",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Axel"
             },
             {
                 "action": "follow_person_until",
-                "complement": "Jane",
-                "characteristic": "bathroom"
+                "destination": "office"
             }
         ]
     },
     {
         "cmd_type": "guideNameFromBeacToBeac",
-        "string_cmd": "take Jules from the storage rack to the kitchen table",
+        "string_cmd": "guide Morgan from the trashbin to the bathroom",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "storage rack",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "trashbin"
             },
             {
-                "action": "find",
-                "complement": "Jules",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Morgan"
             },
             {
-                "action": "guide_to",
-                "complement": "Jules",
-                "characteristic": "kitchen table"
+                "action": "guide_person_to",
+                "destination_room": "bathroom"
             }
         ]
     },
     {
         "cmd_type": "guidePrsFromBeacToBeac",
-        "string_cmd": "lead the lying person from the trashbin to the kitchen table",
+        "string_cmd": "guide the lying person from the sofa to the kitchen",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "trashbin",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "sofa"
             },
             {
-                "action": "find",
-                "complement": "lying person",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "lying person"
             },
             {
-                "action": "guide_to",
-                "complement": "person",
-                "characteristic": "kitchen table"
+                "action": "guide_person_to",
+                "destination_room": "kitchen"
             }
         ]
     },
     {
         "cmd_type": "guideClothPrsFromBeacToBeac",
-        "string_cmd": "escort the person wearing a gray jacket from the exit to the exit",
+        "string_cmd": "lead the person wearing a red jacket from the tv stand to the office",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "exit",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "tv stand"
             },
             {
-                "action": "find",
-                "complement": "gray jacket",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "red jacket"
             },
             {
-                "action": "guide_to",
-                "complement": "person",
-                "characteristic": "exit"
+                "action": "guide_person_to",
+                "destination_room": "office"
             }
         ]
     },
     {
         "cmd_type": "bringMeObjFromPlcmt",
-        "string_cmd": "bring me a pringles from the desk",
+        "string_cmd": "give me a strawberry from the tv stand",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "desk",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "tv stand"
             },
             {
-                "action": "find",
-                "complement": "pringles",
-                "characteristic": ""
+                "action": "pick_object",
+                "object_to_pick": "strawberry"
             },
             {
-                "action": "pick",
-                "complement": "pringles",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
-            },
-            {
-                "action": "give",
-                "complement": "pringles",
-                "characteristic": ""
+                "action": "give_object"
             }
         ]
     },
     {
         "cmd_type": "tellCatPropOnPlcmt",
-        "string_cmd": "tell me what is the heaviest toy on the desk",
+        "string_cmd": "tell me what is the biggest food on the refrigerator",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "desk",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "refrigerator"
             },
             {
-                "action": "visual_info",
-                "complement": "heaviest",
-                "characteristic": "toy"
+                "action": "get_visual_info",
+                "measure": "biggest",
+                "object_category": "food"
             },
             {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me what is the biggest food on the refrigerator",
+                "previous_command_info": "get_visual_info"
             }
         ]
     },
     {
         "cmd_type": "greetClothDscInRm",
-        "string_cmd": "introduce yourself to the person wearing a yellow t shirt in the living room and answer a quiz",
+        "string_cmd": "greet the person wearing a red jacket in the bedroom and take them to the bedside table",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bedroom"
             },
             {
-                "action": "find",
-                "complement": "person with yellow t shirt",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "red jacket"
             },
             {
-                "action": "contextual_say",
-                "complement": "introduction",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "greet the person wearing a red jacket in the bedroom and take them to the bedside table",
+                "previous_command_info": "introduction"
             },
             {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
+                "action": "guide_person_to",
+                "destination_room": "bedside table"
             }
         ]
     },
     {
         "cmd_type": "greetNameInRm",
-        "string_cmd": "salute Charlie in the office and answer a question",
+        "string_cmd": "salute Simone in the bathroom and follow them",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "office",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bathroom"
             },
             {
-                "action": "find",
-                "complement": "Charlie",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Simone"
             },
             {
-                "action": "contextual_say",
-                "complement": "introduction",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "salute Simone in the bathroom and follow them",
+                "previous_command_info": "introduction"
             },
             {
-                "action": "ask_answer_question",
-                "complement": "",
-                "characteristic": ""
+                "action": "follow_person_until",
+                "destination": "canceled"
             }
         ]
     },
     {
         "cmd_type": "meetNameAtLocThenFindInRm",
-        "string_cmd": "meet Jules at the tv stand then look for them in the office",
+        "string_cmd": "meet Axel at the waste basket then locate them in the bedroom",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "tv stand",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "waste basket"
             },
             {
-                "action": "find",
-                "complement": "Jules",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Axel"
             },
             {
-                "action": "say",
-                "complement": "Hi Jules, I'll find you at office",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bedroom"
             },
             {
-                "action": "go",
-                "complement": "office",
-                "characteristic": ""
-            },
-            {
-                "action": "find",
-                "complement": "Jules",
-                "characteristic": ""
-            },
-            {
-                "action": "say",
-                "complement": "Hi Jules, nice to see you again!",
-                "characteristic": ""
+                "action": "find_person_by_name",
+                "name": "Axel"
             }
         ]
     },
     {
         "cmd_type": "countClothPrsInRoom",
-        "string_cmd": "tell me how many people in the kitchen are wearing orange shirts",
+        "string_cmd": "tell me how many people in the kitchen are wearing red t shirts",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "kitchen",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen"
             },
             {
                 "action": "count",
-                "complement": "person",
-                "characteristic": "orange shirts"
+                "target_to_count": "people wearing red t shirts"
             },
             {
-                "action": "go",
-                "complement": "start_location",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "start_location"
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell me how many people in the kitchen are wearing red t shirts",
+                "previous_command_info": "count"
             }
         ]
     },
     {
         "cmd_type": "tellPrsInfoAtLocToPrsAtLoc",
-        "string_cmd": "tell the name of the person at the bookshelf to the person at the storage rack",
+        "string_cmd": "tell the gesture of the person at the kitchen table to the person at the bedside table",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "bookshelf",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen table"
             },
             {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": ""
             },
             {
-                "action": "visual_info",
-                "complement": "name",
-                "characteristic": ""
+                "action": "get_person_info",
+                "info_type": "gesture"
             },
             {
-                "action": "go",
-                "complement": "storage rack",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "bedside table"
             },
             {
-                "action": "find",
-                "complement": "person",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": ""
             },
             {
-                "action": "contextual_say",
-                "complement": "saved_info",
-                "characteristic": ""
+                "action": "say_with_context",
+                "user_instruction": "tell the gesture of the person at the kitchen table to the person at the bedside table",
+                "previous_command_info": "get_person_info"
             }
         ]
     },
     {
         "cmd_type": "followPrsAtLoc",
-        "string_cmd": "follow the person raising their right arm in the living room",
+        "string_cmd": "follow the lying person at the kitchen table",
         "structured_cmd": [
             {
-                "action": "go",
-                "complement": "living room",
-                "characteristic": ""
+                "action": "go_to",
+                "location_to_go": "kitchen table"
             },
             {
-                "action": "find",
-                "complement": "person raising their right arm",
-                "characteristic": ""
+                "action": "find_person",
+                "attribute_value": "lying person"
             },
             {
                 "action": "follow_person_until",
-                "complement": "canceled",
-                "characteristic": ""
+                "destination": "canceled"
+            }
+        ]
+    },
+    {
+        "cmd_type": "goToLoc",
+        "string_cmd": "navigate to the living room then look for a cup and take it and bring it to me",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "living room"
+            },
+            {
+                "action": "pick_object",
+                "object_to_pick": "cup"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "give_object"
+            }
+        ]
+    },
+    {
+        "cmd_type": "takeObjFromPlcmt",
+        "string_cmd": "fetch a dish from the dishwasher and give it to me",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "dishwasher"
+            },
+            {
+                "action": "pick_object",
+                "object_to_pick": "dish"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "give_object"
+            }
+        ]
+    },
+    {
+        "cmd_type": "findPrsInRoom",
+        "string_cmd": "find a sitting person in the living room and answer a quiz",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "living room"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "sitting person"
+            },
+            {
+                "action": "answer_question"
+            }
+        ]
+    },
+    {
+        "cmd_type": "findObjInRoom",
+        "string_cmd": "find a tennis ball in the living room then take it and bring it to the sitting person in the bathroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "living room"
+            },
+            {
+                "action": "pick_object",
+                "object_to_pick": "tennis ball"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "bathroom"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "sitting person"
+            },
+            {
+                "action": "give_object"
+            }
+        ]
+    },
+    {
+        "cmd_type": "meetPrsAtBeac",
+        "string_cmd": "meet Angel in the bathroom and follow them",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bathroom"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Angel"
+            },
+            {
+                "action": "follow_person_until",
+                "destination": "canceled"
+            }
+        ]
+    },
+    {
+        "cmd_type": "countObjOnPlcmt",
+        "string_cmd": "tell me how many cleaning supplies there are on the bed",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bed"
+            },
+            {
+                "action": "count",
+                "target_to_count": "cleaning supplies"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me how many cleaning supplies there are on the bed",
+                "previous_command_info": "count"
+            }
+        ]
+    },
+    {
+        "cmd_type": "countPrsInRoom",
+        "string_cmd": "tell me how many sitting persons are in the kitchen",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "kitchen"
+            },
+            {
+                "action": "count",
+                "target_to_count": "sitting persons"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me how many sitting persons are in the kitchen",
+                "previous_command_info": "count"
+            }
+        ]
+    },
+    {
+        "cmd_type": "tellPrsInfoInLoc",
+        "string_cmd": "tell me the pose of the person in the bathroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bathroom"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": ""
+            },
+            {
+                "action": "get_person_info",
+                "info_type": "pose"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me the pose of the person in the bathroom",
+                "previous_command_info": "get_person_info"
+            }
+        ]
+    },
+    {
+        "cmd_type": "tellObjPropOnPlcmt",
+        "string_cmd": "tell me what is the heaviest object on the side tables",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "side tables"
+            },
+            {
+                "action": "get_visual_info",
+                "measure": "heaviest",
+                "object_category": "object"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me what is the heaviest object on the side tables",
+                "previous_command_info": "get_visual_info"
+            }
+        ]
+    },
+    {
+        "cmd_type": "talkInfoToGestPrsInRoom",
+        "string_cmd": "tell your teams country to the person raising their right arm in the bedroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bedroom"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "person raising their right arm"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell your teams country to the person raising their right arm in the bedroom",
+                "previous_command_info": "your teams country"
+            }
+        ]
+    },
+    {
+        "cmd_type": "answerToGestPrsInRoom",
+        "string_cmd": "answer the question of the waving person in the bathroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bathroom"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "waving person"
+            },
+            {
+                "action": "answer_question"
+            }
+        ]
+    },
+    {
+        "cmd_type": "followNameFromBeacToRoom",
+        "string_cmd": "follow Charlie from the pantry to the kitchen",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "pantry"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Charlie"
+            },
+            {
+                "action": "follow_person_until",
+                "destination": "kitchen"
+            }
+        ]
+    },
+    {
+        "cmd_type": "guideNameFromBeacToBeac",
+        "string_cmd": "lead Paris from the lamp to the chairs",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "lamp"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Paris"
+            },
+            {
+                "action": "guide_person_to",
+                "destination_room": "chairs"
+            }
+        ]
+    },
+    {
+        "cmd_type": "guidePrsFromBeacToBeac",
+        "string_cmd": "guide the waving person from the bedside table to the office",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bedside table"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "waving person"
+            },
+            {
+                "action": "guide_person_to",
+                "destination_room": "office"
+            }
+        ]
+    },
+    {
+        "cmd_type": "guideClothPrsFromBeacToBeac",
+        "string_cmd": "guide the person wearing a gray shirt from the shelf to the kitchen",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "shelf"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "gray shirt"
+            },
+            {
+                "action": "guide_person_to",
+                "destination_room": "kitchen"
+            }
+        ]
+    },
+    {
+        "cmd_type": "bringMeObjFromPlcmt",
+        "string_cmd": "bring me a mustard from the sofa",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "sofa"
+            },
+            {
+                "action": "pick_object",
+                "object_to_pick": "mustard"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "give_object"
+            }
+        ]
+    },
+    {
+        "cmd_type": "tellCatPropOnPlcmt",
+        "string_cmd": "tell me what is the thinnest cleaning supply on the shelf",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "shelf"
+            },
+            {
+                "action": "get_visual_info",
+                "measure": "thinnest",
+                "object_category": "cleaning supply"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me what is the thinnest cleaning supply on the shelf",
+                "previous_command_info": "get_visual_info"
+            }
+        ]
+    },
+    {
+        "cmd_type": "greetClothDscInRm",
+        "string_cmd": "salute the person wearing a yellow shirt in the office and tell what day is today",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "office"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "yellow shirt"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "salute the person wearing a yellow shirt in the office and tell what day is today",
+                "previous_command_info": "introduction"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "salute the person wearing a yellow shirt in the office and tell what day is today",
+                "previous_command_info": "what day is today"
+            }
+        ]
+    },
+    {
+        "cmd_type": "greetNameInRm",
+        "string_cmd": "introduce yourself to Jules in the bedroom and follow them",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bedroom"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Jules"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "introduce yourself to Jules in the bedroom and follow them",
+                "previous_command_info": "introduction"
+            },
+            {
+                "action": "follow_person_until",
+                "destination": "canceled"
+            }
+        ]
+    },
+    {
+        "cmd_type": "meetNameAtLocThenFindInRm",
+        "string_cmd": "meet Angel at the refrigerator then find them in the bedroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "refrigerator"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Angel"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "bedroom"
+            },
+            {
+                "action": "find_person_by_name",
+                "name": "Angel"
+            }
+        ]
+    },
+    {
+        "cmd_type": "countClothPrsInRoom",
+        "string_cmd": "tell me how many people in the living room are wearing red sweaters",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "living room"
+            },
+            {
+                "action": "count",
+                "target_to_count": "people wearing red sweaters"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "start_location"
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell me how many people in the living room are wearing red sweaters",
+                "previous_command_info": "count"
+            }
+        ]
+    },
+    {
+        "cmd_type": "tellPrsInfoAtLocToPrsAtLoc",
+        "string_cmd": "tell the gesture of the person at the side tables to the person at the waste basket",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "side tables"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": ""
+            },
+            {
+                "action": "get_person_info",
+                "info_type": "gesture"
+            },
+            {
+                "action": "go_to",
+                "location_to_go": "waste basket"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": ""
+            },
+            {
+                "action": "say_with_context",
+                "user_instruction": "tell the gesture of the person at the side tables to the person at the waste basket",
+                "previous_command_info": "get_person_info"
+            }
+        ]
+    },
+    {
+        "cmd_type": "followPrsAtLoc",
+        "string_cmd": "follow the standing person in the bedroom",
+        "structured_cmd": [
+            {
+                "action": "go_to",
+                "location_to_go": "bedroom"
+            },
+            {
+                "action": "find_person",
+                "attribute_value": "standing person"
+            },
+            {
+                "action": "follow_person_until",
+                "destination": "canceled"
             }
         ]
     }
