@@ -20,7 +20,7 @@ fg_folders = [(path, os.path.basename(path)) for path in path_to_classes]
 # Define folders
 bg_folder = workdir + "bg/"
 verify_or_create_dir(bg_folder)
-output_folder = workdir + "dsyolo_test_jul5_1/"
+output_folder = workdir + "AAAA2/"
 objects_list = [os.path.basename(class_path) for class_path in path_to_classes]
 
 # If you have a list of original classes, uncomment and fill it
@@ -211,6 +211,8 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, Unidenti
 import numpy as np
 import yaml
 import tqdm
+import multiprocessing as mp
+from functools import partial
 
 images = []
 annotations = []
@@ -229,12 +231,16 @@ max_overlap_pct = 25
 trainfolder = output_folder + "train/"
 validfolder = output_folder + "valid/"
 
-images_to_generate = 100
+images_to_generate = 50
 max_objects_per_image = 8
 
 progress_bar = tqdm.tqdm(total=images_to_generate, desc="Generating images")
 
-for j in range(images_to_generate):
+def generate_single_image(img_id, fg_folders, fg_files, bg_folder, annotations_ID, 
+                         objects_list, trainfolder, max_objects_per_image):
+    """Generate a single synthetic image with annotations"""
+    
+    # Create empty label file
     with open(f'{trainfolder}labels/{img_id}.txt', 'w') as file:
         pass
 
@@ -245,28 +251,27 @@ for j in range(images_to_generate):
         num_objects = random.randint(1, max_objects_per_image)
 
     fg_categories = random.choices(objects_list, k=num_objects)
-
-    fg_files_selected = [[category, random.choice(
-        fg_files[category])] for category in fg_categories]
+    fg_files_selected = [[category, random.choice(fg_files[category])] for category in fg_categories]
 
     fg_imgs = []
     for img in fg_files_selected:
         folder = [f[0] for f in fg_folders if f[1] == img[0]][0]
         fg_img = Image.open(folder + "/" + img[1]).convert("RGBA")
-        fg_imgs.append(
-            [img[0], Image.open(folder + "/" + img[1]), folder + img[1]])
+        fg_imgs.append([img[0], Image.open(folder + "/" + img[1]), folder + img[1]])
 
     bg_files = os.listdir(bg_folder)
     bg_file = random.choice(bg_files)
-    # ignore if bg_file is not a file
     while not os.path.isfile(bg_folder + bg_file):
         bg_file = random.choice(bg_files)
     bg_img = Image.open(bg_folder + bg_file)
     bg_img = bg_img.convert("RGBA")
 
     occupied_mask = np.zeros((bg_img.height, bg_img.width), dtype=np.uint8)
-
-    for img in fg_imgs:
+    
+    image_annotations = []
+    anno_id_start = img_id * 1000  # Avoid ID conflicts
+    
+    for idx, img in enumerate(fg_imgs):
         fg_img = img[1]
 
         angle = random.randint(-5, 5)
@@ -282,28 +287,22 @@ for j in range(images_to_generate):
         scale_min = max(min_scale_w, min_scale_h)
         scale_max = min(max_scale_w, max_scale_h)
 
-        # Clamp to [0.01, 1.0] just in case
         scale_min = max(scale_min, 0.01)
         scale_max = min(scale_max, 1.0)
 
-        # If bounds are inverted due to very large fg, clamp both to min_scale
         if scale_max < scale_min:
             scale_max = scale_min
 
         scale = random.uniform(scale_min, scale_max)
-
         new_w = int(original_w * scale)
         new_h = int(original_h * scale)
 
         fg_img = fg_img.resize((new_w, new_h), resample=Image.BICUBIC)
 
-        fg_img = ImageEnhance.Brightness(
-            fg_img).enhance(random.uniform(0.8, 1.2))
-        fg_img = ImageEnhance.Contrast(
-            fg_img).enhance(random.uniform(0.8, 1.2))
+        fg_img = ImageEnhance.Brightness(fg_img).enhance(random.uniform(0.8, 1.2))
+        fg_img = ImageEnhance.Contrast(fg_img).enhance(random.uniform(0.8, 1.2))
         fg_img = ImageEnhance.Color(fg_img).enhance(random.uniform(0.8, 1.2))
-        fg_img = fg_img.filter(ImageFilter.GaussianBlur(
-            radius=random.uniform(0.0, 0.8)))
+        fg_img = fg_img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.0, 0.8)))
 
         img[1] = fg_img
 
@@ -316,10 +315,9 @@ for j in range(images_to_generate):
 
             fg_mask = np.array(fg_img.split()[-1]) > 0
 
-            # Make sure dimensions align (especially after rotation/resize)
             mask_h, mask_w = fg_mask.shape
             if y + mask_h > occupied_mask.shape[0] or x + mask_w > occupied_mask.shape[1]:
-                continue  # skip if out of bounds (shouldn’t usually happen)
+                continue
 
             occ_crop = occupied_mask[y:y + mask_h, x:x + mask_w]
             fg_mask_area = np.sum(fg_mask)
@@ -327,13 +325,10 @@ for j in range(images_to_generate):
             overlap = np.sum(np.logical_and(fg_mask, occ_crop))
 
             allowed_overlap_fg = max_overlap_pct / 100 * fg_mask_area
-            allowed_overlap_occ = max_overlap_pct / 100 * \
-                occ_crop_area if occ_crop_area > 0 else 0
+            allowed_overlap_occ = max_overlap_pct / 100 * occ_crop_area if occ_crop_area > 0 else 0
 
-            # Accept placement only if it doesn't cover too much of either
             if overlap <= allowed_overlap_fg and overlap <= allowed_overlap_occ:
-                occupied_mask[y:y + fg_img.height, x:x +
-                              fg_img.width] = np.logical_or(occ_crop, fg_mask)
+                occupied_mask[y:y + fg_img.height, x:x + fg_img.width] = np.logical_or(occ_crop, fg_mask)
                 break
         else:
             continue
@@ -352,8 +347,7 @@ for j in range(images_to_generate):
 
         area = abs(sum(
             segmentation[0][2 * i] * segmentation[0][(2 * i + 3) % len(segmentation[0])] -
-            segmentation[0][(2 * i + 2) % len(segmentation[0])
-                            ] * segmentation[0][2 * i + 1]
+            segmentation[0][(2 * i + 2) % len(segmentation[0])] * segmentation[0][2 * i + 1]
             for i in range(len(segmentation[0]) // 2)
         )) / 2
 
@@ -374,10 +368,6 @@ for j in range(images_to_generate):
         if not (0 <= x_center_ann <= 1 and 0 <= y_center_ann <= 1 and 0 <= width_ann <= 1 and 0 <= height_ann <= 1):
             continue
 
-        # with open(f'{trainfolder}labels/{img_id}.txt', 'a') as f:
-        #     f.write(
-        #         f"{annotations_ID[img[0]]} {x_center_ann} {y_center_ann} {width_ann} {height_ann}\n")
-
         # Create segmentation labels
         normalize_seg = []
         for i in range(len(segmentation[0])):
@@ -386,39 +376,71 @@ for j in range(images_to_generate):
             else:
                 val = segmentation[0][i] / bg_img.height
             normalize_seg.append(str(val))
+        
         with open(f'{trainfolder}labels/{img_id}.txt', 'a') as f:
             f.write(f"{annotations_ID[img[0]]} {' '.join(normalize_seg)}\n")
 
-        annotations2.append({
-            "id": anno_id, "image_id": img_id, "category_id": annotations_ID[img[0]],
+        # Store annotation data
+        annotation_data = {
+            "id": anno_id_start + idx,
+            "image_id": img_id,
+            "category_id": annotations_ID[img[0]],
             "bbox": [x, y, fg_img.width, fg_img.height],
-            "segmentation": segmentation, "area": area, "iscrowd": 0
-        })
-        annotations.append({
-            "id": anno_id, "image_id": img_id, "category_id": annotations_ID[img[0]],
-            "bbox": [x, y, fg_img.width, fg_img.height],
-            "segmentation": [], "area": fg_img.height * fg_img.width, "iscrowd": 0
-        })
-        annot_csv.append([
-            "TRAIN", output_folder +
-            str(img_id)+".jpg", img[0], x/bg_img.width, y/bg_img.height,
-            "", "", (x+fg_img.width) /
-            bg_img.width, (y+fg_img.height)/bg_img.height
-        ])
-
-        anno_id += 1
-
-    
+            "segmentation": segmentation,
+            "area": area,
+            "iscrowd": 0
+        }
+        image_annotations.append(annotation_data)
+    if len(image_annotations) == 0:
+        with open(f'{trainfolder}labels/{img_id}.txt', 'w') as f:
+            f.write("")
     # Apply additional augmentation
     bg_img = augment_image(bg_img)
-    
     bg_img = bg_img.convert("RGB")
-    bg_img.save(f"{trainfolder}images/" + str(img_id) + ".jpg", quality=100)
-    images.append({"id": img_id, "file_name": str(img_id) + ".jpg",
-                  "height": bg_img.height, "width": bg_img.width})
-    img_id += 1
+    bg_img.save(f"{trainfolder}images/{img_id}.jpg", quality=100)
     
-    progress_bar.update(1)
+    image_data = {
+        "id": img_id,
+        "file_name": f"{img_id}.jpg",
+        "height": bg_img.height,
+        "width": bg_img.width
+    }
+    
+    return image_data, image_annotations
+
+# Parallel execution
+if __name__ == "__main__":
+    num_processes = min(mp.cpu_count() - 1, 24)  # Leave one core free, max 8 processes
+    
+    # Create partial function with fixed parameters
+    generate_func = partial(
+        generate_single_image,
+        fg_folders=fg_folders,
+        fg_files=fg_files,
+        bg_folder=bg_folder,
+        annotations_ID=annotations_ID,
+        objects_list=objects_list,
+        trainfolder=trainfolder,
+        max_objects_per_image=max_objects_per_image
+    )
+    
+    progress_bar = tqdm.tqdm(total=images_to_generate, desc="Generating images")
+    
+    with mp.Pool(processes=num_processes) as pool:
+        results = []
+        for i in range(images_to_generate):
+            result = pool.apply_async(generate_func, (i,))
+            results.append(result)
+        
+        # Collect results
+        for result in results:
+            image_data, image_annotations = result.get()
+            images.append(image_data)
+            annotations.extend(image_annotations)
+            annotations2.extend(image_annotations)
+            progress_bar.update(1)
+    
+    progress_bar.close()
 
 # Create data.yaml
 data = dict(
