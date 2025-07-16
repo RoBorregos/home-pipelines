@@ -8,6 +8,7 @@ import torch
 from asyncio import run, gather, Lock, Semaphore
 import threading
 import concurrent.futures
+import yaml
 
 
 class CropSettings(BaseModel):
@@ -42,6 +43,12 @@ class CropProcessor:
             model_name="vit_h"
         )
         self.processor = Processor(ProcessorSettings=self.processor_settings)
+        self.settings.class_name_to_prompt = {}
+        if os.path.exists("class_name_to_prompt.yaml"):
+            with open("class_name_to_prompt.yaml", 'r') as f:
+                self.settings.class_name_to_prompt = yaml.safe_load(f)
+        else:
+            print(f"Warning: Prompt file class_name_to_prompt.yaml not found. Using empty prompts.")
         self.annotations = {}
         self.annotations_lock = Lock()
 
@@ -140,7 +147,7 @@ class CropProcessor:
             import concurrent.futures
 
             max_workers = min(len(dirs), os.cpu_count() or 4)
-            max_workers = 2
+            max_workers = 8
             max_workers = max(max_workers, 1)
             print(
                 f"Processing {len(dirs)} directories with {max_workers} workers")
@@ -209,14 +216,14 @@ class CropProcessor:
                 print(f"Completed directory: {classname}")
             
 
-
 def main():
+    
     settings = CropSettings(
-        input_dir="/home/roborregos/robocup-2025/raw_photos/zed/robocup2025_objects",
-        output_dir="/home/roborregos/visao/home-pipelines/vision/object_detector/processed/",
-        annotations_file="/home/roborregos/visao/home-pipelines/vision/object_detector/annotations.json",
-        journal_dir="/home/roborregos/visao/home-pipelines/vision/object_detector/journal/",
-        multi_threaded=True,
+        input_dir="/home/roborregos/robocup-2025/merged2",
+        output_dir="/home/roborregos/robocup-2025/processed_merged2",
+        annotations_file="/home/roborregos/robocup-2025/annotations_merged2.json",
+        journal_dir="/home/roborregos/robocup-2025/journal_merged2/",
+        multi_threaded=False,
         class_name_to_prompt={}
     )
     processor = CropProcessor(settings)

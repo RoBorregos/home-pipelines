@@ -246,7 +246,7 @@ class Processor:
         cropped_image = image.crop((min_x, min_y, max_x, max_y))
         return cropped_image
 
-    def process_image(self, image: Image.Image, classname: str) -> list[CroppedResult]:
+    def process_image(self, image: Image.Image, classname: str, prompt: str | None) -> list[CroppedResult]:
         # Set the text_threshold to None if token_spans is set.
         text_threshold = self.settings.text_threshold
         token_spans = self.settings.token_spans
@@ -263,7 +263,9 @@ class Processor:
                 token_spans_eval = None
 
         boxes, labels = self.predict_groundingdino(
-            image, classname, self.settings.box_threshold,
+            image, 
+            classname if prompt is None else prompt, 
+            self.settings.box_threshold,
             text_threshold=text_threshold,
             token_spans=token_spans_eval)
 
@@ -332,9 +334,12 @@ class Processor:
             pngmask = cv2.morphologyEx(pngmask, cv2.MORPH_OPEN, kernel)
 
             # Create result image with alpha channel
+            # result = img.copy()
+            # result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
+            # result[:, :, 3] = pngmask
             result = img.copy()
             result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
-            result[:, :, 3] = pngmask
+            result = cv2.bitwise_and(result, result, mask=pngmask)
 
             # Convert back to PIL Image format
             img_res = Image.fromarray(
