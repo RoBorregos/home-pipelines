@@ -1,17 +1,20 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import RunsTable from './RunsTable';
+import RunsTable from '../_components/RunsTable';
+import { useNavigate } from 'react-router-dom';
 
-const PastRuns = ({ setCurrentPage, runs, setSelectedRun }) => {
+const PastRunsPage = ({ runs, setSelectedRun }) => {
+  const navigate = useNavigate();
+
   const handleViewDetails = (run) => {
-    setSelectedRun(run);
-    setCurrentPage('details');
+    setSelectedRun && setSelectedRun(run);
+    navigate('/details');
   };
 
   return (
     <div className="mt-12 p-8">
       <button 
-        onClick={() => setCurrentPage('dashboard')} 
+        onClick={() => navigate('/')} 
         className="text-purple-300 hover:text-white mb-6 flex items-center gap-2"
       >
         <ArrowLeft size={20} /> Back to Dashboard
@@ -24,4 +27,4 @@ const PastRuns = ({ setCurrentPage, runs, setSelectedRun }) => {
   );
 };
 
-export default PastRuns;
+export default PastRunsPage;

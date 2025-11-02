@@ -1,14 +1,16 @@
 import React from 'react';
 import { ArrowLeft, Download } from 'lucide-react';
-import StepAccordion from './StepAccordion';
+import StepAccordion from '../_components/StepAccordion';
+import { useNavigate } from 'react-router-dom';
 
-const RunDetails = ({ setCurrentPage, selectedRun }) => {
+const DetailsPage = ({ selectedRun }) => {
+  const navigate = useNavigate();
   if (!selectedRun) return null;
 
   return (
     <div className="mt-12 p-8">
       <button 
-        onClick={() => setCurrentPage('past')} 
+        onClick={() => navigate('/past')} 
         className="text-purple-300 hover:text-white mb-6 flex items-center gap-2"
       >
         <ArrowLeft size={20} /> Back to Past Runs
@@ -37,4 +39,4 @@ const RunDetails = ({ setCurrentPage, selectedRun }) => {
   );
 };
 
-export default RunDetails;
+export default DetailsPage;

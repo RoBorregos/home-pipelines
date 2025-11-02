@@ -15,7 +15,7 @@ const RunsTable = ({ runs, onViewDetails }) => {
           </tr>
         </thead>
         <tbody>
-          {runs.map(run => (
+          {runs && runs.map(run => (
             <tr key={run.id} className="border-t border-purple-500/10 hover:bg-white/5 transition">
               <td className="px-6 py-4 text-white">#{run.id}</td>
               <td className="px-6 py-4 text-purple-200">{run.date}</td>

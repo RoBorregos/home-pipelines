@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import Layout from './components/Layout/Layout';
-import Dashboard from './components/Dashboard/Dashboard';
-import RunPipeline from './components/RunPipeline/RunPipeline';
-import PastRuns from './components/PastRuns/PastRuns';
-import RunDetails from './components/RunDetails/RunDetails';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './layout';
+import RunPage from './pages/RunPage';
+import PastRunsPage from './pages/PastRunsPage';
+import DetailsPage from './pages/DetailsPage';
+import DashboardPage from './pages/DashboardPage';
 
 const App = () => {
-  const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedRun, setSelectedRun] = useState(null);
   const [runs, setRuns] = useState([
     { 
@@ -44,28 +44,23 @@ const App = () => {
       steps: steps.map(s => ({ name: s, status: 'success', logs: `Completed ${s}` }))
     };
     setRuns([newRun, ...runs]);
-    setCurrentPage('past');
   };
 
-  const renderPage = () => {
-    switch(currentPage) {
-      case 'dashboard':
-        return <Dashboard setCurrentPage={setCurrentPage} runs={runs} />;
-      case 'run':
-        return <RunPipeline setCurrentPage={setCurrentPage} onRunComplete={handleRunComplete} />;
-      case 'past':
-        return <PastRuns setCurrentPage={setCurrentPage} runs={runs} setSelectedRun={setSelectedRun} />;
-      case 'details':
-        return <RunDetails setCurrentPage={setCurrentPage} selectedRun={selectedRun} />;
-      default:
-        return <Dashboard setCurrentPage={setCurrentPage} runs={runs} />;
-    }
+  const handleViewDetails = (run) => {
+    setSelectedRun(run);
   };
 
   return (
-    <Layout currentPage={currentPage} setCurrentPage={setCurrentPage}>
-      {renderPage()}
-    </Layout>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<DashboardPage runs={runs} />} />
+          <Route path="/run" element={<RunPage onRunComplete={handleRunComplete} />} />
+          <Route path="/past" element={<PastRunsPage runs={runs} setSelectedRun={handleViewDetails} />} />
+          <Route path="/details" element={<DetailsPage selectedRun={selectedRun} />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 };
 
