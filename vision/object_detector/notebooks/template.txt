@@ -1,0 +1,57 @@
+async def setup():
+    print("Setup completed.")
+
+
+import asyncio
+from fastapi import FastAPI, WebSocket
+
+FUNCTION_REGISTRY = {
+    "setup": setup,
+    "crop": crop,
+    "resize": resize,
+    "segment": segment,
+    "crop_precessed": crop_precessed,
+    "manually_check": manually_check,
+}
+
+app = FastAPI()
+
+async def execute_function(name: str):
+    func = FUNCTION_REGISTRY.get(name)
+
+    if not func:
+        print(f"'{name}' function not found.")
+        return
+
+    print(f"▶️ Executing: {name}")
+
+    try:
+        result = func()
+        if asyncio.iscoroutine(result):
+            await result
+        print(f"✅ Finished: {name}")
+
+    except Exception as e:
+        print(f"🔥 Error in {name}: {str(e)}")
+
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    await ws.accept()
+
+    try:
+        while True:
+            data = json.loads(await ws.receive_text())
+
+            if data["action"] == "run":
+                tags = data.get("tags")
+                for tag in tags:
+                    tag_name = tag.get("name") if isinstance(tag, dict) else tag
+                    if not tag_name:
+                        continue
+                    asyncio.create_task(execute_function(tag_name))
+
+    except Exception:
+        pass
+
+if __name__ == '__main__':
+    pass

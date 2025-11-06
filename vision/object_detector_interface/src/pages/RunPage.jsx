@@ -4,7 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import UploadDataset from '../_components/RunPipeline/UploadDataset';
 import PipelineParams from '../_components/RunPipeline/PipelineParams';
 import ProgressTracker from '../_components/RunPipeline/ProgressTracker';
+import CellRunner from '../_components/RunPipeline/CellRunner';
 
+export const ws = new WebSocket("ws://localhost:8000/ws");
+export const ws2 = new WebSocket("ws://localhost:9000/ws");
+const cells = [
+  'setup',
+  'crop',
+  'resize',
+  'segment'
+]
 const RunPage = ({ onRunComplete }) => {
   const navigate = useNavigate();
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -42,40 +51,14 @@ const RunPage = ({ onRunComplete }) => {
 
       <h1 className="text-4xl font-bold text-white mb-8">Run New Pipeline</h1>
 
-      {!isRunning && !showNotebook ? (
-        <div className="space-y-6 max-w-4xl">
-          <UploadDataset uploadedFile={uploadedFile} setUploadedFile={setUploadedFile} />
-          <PipelineParams />
-          
-          <div className="flex gap-4">
-            <button 
-              onClick={simulateRun}
-              disabled={!uploadedFile}
-              className="flex-1 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold text-lg shadow-xl transform hover:scale-105 transition flex items-center justify-center gap-3"
-            >
-              <Play size={24} />
-              Start Run
-            </button>
-
-            <button
-              onClick={() => setShowNotebook(true)}
-              className="w-44 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold shadow-md"
-            >
-              Run Notebook
-            </button>
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold text-white mb-4">Cell Executors</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {cells.map((c) => (
+                <CellRunner key={c} tag={c} ws={ws} ws2={ws2} />
+              ))}
+            </div>
           </div>
-        </div>
-      ) : null}
-
-      {isRunning ? (
-        <div className="max-w-4xl">
-          <ProgressTracker 
-            currentStep={currentStep} 
-            steps={steps} 
-            onCancel={() => setIsRunning(false)} 
-          />
-        </div>
-      ) : null}
 
     </div>
   );

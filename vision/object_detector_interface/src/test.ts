@@ -1,10 +1,11 @@
-const ws = new WebSocket("ws://localhost:8000/ws");
+export const ws = new WebSocket("ws://localhost:8000/ws");
 
-ws.onmessage = (msg) => console.log("LOG:", msg.data);
+export const wsOnMessage = ws.onmessage = (msg) => console.log("LOG:", msg.data);
 
-ws.onopen = () => {
+export const wsOnOpen =
+ws.onopen = (tag) => {
   ws.send(JSON.stringify({
     action: "run",
-    tags: ["test"]
+    tags: [tag]
   }));
 };
