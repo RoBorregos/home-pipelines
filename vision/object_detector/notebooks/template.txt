@@ -1,6 +1,29 @@
 async def setup():
     print("Setup completed.")
 
+async def run_command(command: str):
+    print(f"Running command: {command}")
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        cwd=workdir
+    )
+    while True:
+        line = await process.stdout.readline()
+        if not line:
+            break
+        line = line.decode().strip()
+        print(line)
+    await process.wait()
+    
+
+async def downloadModels():
+    print(os.getcwd())
+    await run_command("git clone https://github.com/IDEA-Research/GroundingDINO.git")
+    await run_command("wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth")
+    await run_command("wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth")
+
 
 import asyncio
 from fastapi import FastAPI, WebSocket
@@ -12,9 +35,11 @@ FUNCTION_REGISTRY = {
     "segment": segment,
     "crop_precessed": crop_precessed,
     "manually_check": manually_check,
+    "downloadModels": downloadModels,
 }
 
 app = FastAPI()
+active_tasks = {}
 
 async def execute_function(name: str):
     func = FUNCTION_REGISTRY.get(name)
@@ -29,6 +54,7 @@ async def execute_function(name: str):
         result = func()
         if asyncio.iscoroutine(result):
             await result
+        active_tasks.pop(name, None)
         print(f"✅ Finished: {name}")
 
     except Exception as e:
@@ -48,7 +74,8 @@ async def ws_endpoint(ws: WebSocket):
                     tag_name = tag.get("name") if isinstance(tag, dict) else tag
                     if not tag_name:
                         continue
-                    asyncio.create_task(execute_function(tag_name))
+                    task = asyncio.create_task(execute_function(tag_name))
+                    active_tasks[tag_name] = task
 
     except Exception:
         pass

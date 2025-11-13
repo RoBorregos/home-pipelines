@@ -6,15 +6,39 @@ import PipelineParams from '../_components/RunPipeline/PipelineParams';
 import ProgressTracker from '../_components/RunPipeline/ProgressTracker';
 import CellRunner from '../_components/RunPipeline/CellRunner';
 
-export const ws = new WebSocket("ws://localhost:8000/ws");
+//export const ws = new WebSocket("ws://localhost:8000/ws");
+let ws;
 export const ws2 = new WebSocket("ws://localhost:9000/ws");
+
+function connectWebSocket() {
+  ws = new WebSocket("ws://localhost:8000/ws");
+
+  ws.onopen = () => {
+    console.log("✅ WebSocket conectado");
+  };
+
+  ws.onclose = () => {
+  console.log("⚠️ WebSocket cerrado. Reintentando en 2s...");
+  ws = null;
+  setTimeout(() => {
+    connectWebSocket();
+  }, 2000);
+};
+
+}
+
+connectWebSocket();
+export { ws }; 
+
 const cells = [
   'setup',
+  'downloadModels',
   'crop',
   'resize',
-  'segment'
+  'segment',
 ]
 const RunPage = ({ onRunComplete }) => {
+
   const navigate = useNavigate();
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isRunning, setIsRunning] = useState(false);

@@ -1,42 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronDown, Play, Trash } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { ChevronDown, Play, Square, SquareArrowDown, Trash } from 'lucide-react';
 import { ws, ws2 } from '../../pages/RunPage';
 
 const CellRunner = ({ tag }) => {
     // Keep websocket handlers as-is (visual-only changes requested).
     ws2.onmessage = (msg) => {
         // message content is not altered; we only append for display
-        console.log("LOGPPP:", msg.data);
+        console.log("LOG:", msg.data);
         setLogs((s) => [...s, msg.data]);
         if(msg.data.includes("Finished")){
             setRunning(false);
         }
     };
 
-    const wsOnOpen =
-    ws.onopen = (tag) => {
+    const wsRun = (tag) => {
         ws.send(JSON.stringify({
-        action: "run",
-        tags: [tag]
+          action: "run",
+          tags: [tag]
+        }));
+    };
+
+    const wsStop = (tag) => {
+        ws2.send(JSON.stringify({
+          action: "stop",
+          tags: [tag]
         }));
     };
 
   const [open, setOpen] = useState(false);
   const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
+  const logsEndRef = useRef(null);
+
+  useEffect(() => {
+    const lref = logsEndRef.current;
+    if (!lref) return;
+    const isBottom = lref.scrollHeight - lref.scrollTop - lref.clientHeight <= 1000;
+    if (isBottom) {
+      lref.scrollTop = lref.scrollHeight;
+    } 
+  }, [logs]);
 
   const handleRun = () => {
     setRunning(true);
     setOpen(true);
-    // wsOnOpen in repo is implemented as a helper that sends a run message with the tag
     try {
-      if (typeof wsOnOpen === 'function') wsOnOpen(tag);
-      else if (typeof ws.onopen === 'function') ws.onopen(tag);
+      wsRun(tag);
     } catch (e) {
       setLogs((s) => [...s, `Error sending run request: ${e.message}`]);
       setRunning(false);
     }
   };
+
+  const handleStop = () => {
+    try {
+      wsStop(tag);
+      setRunning(false);
+    } catch (e) {
+      setLogs((s) => [...s, `Error sending stop request: ${e.message}`]);
+    }
+  };
+
 
   const handleClear = () => setLogs([]);
 
@@ -111,12 +135,15 @@ const CellRunner = ({ tag }) => {
           <button onClick={handleClear} className="flex items-center gap-2 px-3 py-2 rounded-md bg-gray-700 text-gray-200 hover:bg-gray-600">
             <Trash size={14} /> Clear
           </button>
+          <button onClick={handleStop} className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white">
+            <Square size={14} /> Stop
+          </button>
           <button onClick={handleCopyAll} className="ml-2 text-sm px-3 py-2 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-100">Copy all</button>
         </div>
       </div>
 
       {open && (
-        <div className="mt-3 border-t border-slate-700 pt-3 max-h-56 overflow-auto pr-2">
+        <div ref={logsEndRef} className="mt-3 border-t border-slate-700 pt-3 max-h-56 overflow-auto pr-2">
           {logs.length === 0 ? (
             <div className="text-sm text-slate-400 p-4 bg-slate-800/80 rounded">No logs yet. Run this cell tag to see output.</div>
           ) : (
