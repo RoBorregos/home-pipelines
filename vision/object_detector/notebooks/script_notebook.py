@@ -441,233 +441,10 @@ async def crop_precessed():
                 continue
 
 
-async def manually_check():
-    import os
-    import ipywidgets as widgets
-    from IPython.display import display, clear_output, HTML
-    from PIL import Image as PILImage
-    import io
-    import base64
-    
-    # --- CONFIG ---
-    image_dir = workdir + 'DS_res'  # your directory
-    image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp')
-    batch_size = 12
-    grid_cols = 4
-    thumb_size = (200, 200)
-    
-    # --- Collect images ---
-    image_paths = []
-    for root, _, files in os.walk(image_dir):
-        for file in files:
-            if file.lower().endswith(image_extensions):
-                full_path = os.path.join(root, file)
-                if os.path.isfile(full_path):
-                    image_paths.append(full_path)
-    
-    print(f"Found {len(image_paths)} images")
-    
-    # --- State ---
-    index = {"i": 0}
-    delete_list = []
-    output = widgets.Output()
-    status = widgets.Label()
-    next_button = widgets.Button(description="Next Batch", button_style='primary')
-    delete_button = widgets.Button(
-        description="Delete Selected", button_style='danger')
-    confirm_delete = widgets.Button(
-        description="Confirm Deletion", button_style='danger')
-    
-    
-    def show_batch():
-        output.clear_output(wait=True)
-    
-        start = index["i"]
-        end = min(start + batch_size, len(image_paths))
-        batch = image_paths[start:end]
-    
-        if not batch:
-            with output:
-                print("✅ Done reviewing all images.")
-                if delete_list:
-                    print(
-                        f"🗑️ {len(delete_list)} images marked for deletion. Click 'Confirm Deletion' to delete.")
-                display(confirm_delete)
-            return
-    
-        # Create all widgets for the batch
-        image_checkboxes = []
-        current_batch_cbs = []  # To store checkboxes for this batch
-    
-        for img_path in batch:
-            try:
-                # Create the checkbox
-                cb = widgets.Checkbox(
-                    description=f"{os.path.basename(img_path)}",
-                    indent=False,
-                    layout=widgets.Layout(width='auto')
-                )
-                cb.image_path = img_path
-                current_batch_cbs.append(cb)
-    
-                # Load and resize the image
-                img = PILImage.open(img_path)
-                img.thumbnail(thumb_size)
-                buf = io.BytesIO()
-                img.save(buf, format='PNG')
-                buf.seek(0)
-                img_data = buf.getvalue()
-    
-                # Create image widget
-                img_widget = widgets.Image(
-                    value=img_data,
-                    format='png',
-                    width=200,
-                    height=200,
-                    layout=widgets.Layout(
-                        margin='0px'
-                    )
-                )
-    
-                # Simple VBox container for image and checkbox
-                container = widgets.VBox([
-                    img_widget,
-                    cb
-                ], layout=widgets.Layout(
-                    border='1px solid #ddd',
-                    margin='5px',
-                    padding='5px',
-                    align_items='center'
-                ))
-    
-                image_checkboxes.append(container)
-    
-            except Exception as e:
-                print(f"Error loading {img_path}: {str(e)}")
-                # Create an error placeholder with checkbox
-                error_widget = widgets.HTML(
-                    value=f"⚠️ Error loading:<br>{os.path.basename(img_path)}",
-                    layout=widgets.Layout(
-                        height='200px',
-                        width='200px',
-                        display='flex',
-                        align_items='center',
-                        justify_content='center'
-                    )
-                )
-    
-                cb = widgets.Checkbox(
-                    description=f"{os.path.basename(img_path)}",
-                    indent=False,
-                    layout=widgets.Layout(width='auto')
-                )
-                cb.image_path = img_path
-                current_batch_cbs.append(cb)
-    
-                container = widgets.VBox([
-                    error_widget,
-                    cb
-                ], layout=widgets.Layout(
-                    border='1px solid #ddd',
-                    margin='5px',
-                    padding='5px',
-                    align_items='center'
-                ))
-    
-                image_checkboxes.append(container)
-    
-        # Store the checkboxes for this batch
-        output.current_batch_checkboxes = current_batch_cbs
-    
-        # Rest of your show_batch function remains the same...
-        # Create grid layout
-        grid = []
-        for i in range(0, len(image_checkboxes), grid_cols):
-            row = image_checkboxes[i:i+grid_cols]
-            grid.append(widgets.HBox(row))
-    
-        # Add instructions for the user
-        instructions = widgets.HTML(
-            value="""
-            <div style="padding: 10px; background-color: #e3f2fd; border-radius: 5px; margin-bottom: 15px;">
-                <p><strong>Instructions:</strong> Review the images and select the checkbox below each image you want to delete.
-                Click "Delete Selected" to mark them for deletion and move to the next batch. 
-                When finished, click "Confirm Deletion" to permanently delete all marked images.</p>
-            </div>
-            """
-        )
-    
-        with output:
-            display(instructions)
-    
-            # Display the grid
-            for row in grid:
-                display(row)
-    
-            # Display buttons
-            button_box = widgets.HBox([next_button, delete_button, confirm_delete])
-            display(button_box)
-            display(status)
-    
-    
-    def on_next_click(_):
-        index["i"] += batch_size
-        show_batch()
-    
-    
-    def on_delete_click(_):
-        # We need to track selected checkboxes differently since the widgets are cleared
-        # Let's modify show_batch to store the current batch checkboxes
-        if hasattr(output, 'current_batch_checkboxes'):
-            selected = [
-                cb.image_path for cb in output.current_batch_checkboxes if cb.value]
-            delete_list.extend(selected)
-            status.value = f"🗑️ Marked {len(selected)} new image(s), {len(delete_list)} total for deletion."
-    
-        # Move to next batch
-        index["i"] += batch_size
-        show_batch()
-    
-    
-    def delete_images(_):
-        if not delete_list:
-            status.value = "No images selected for deletion."
-            return
-    
-        deleted = 0
-        failed = 0
-    
-        for path in delete_list:
-            try:
-                os.remove(path)
-                deleted += 1
-            except Exception as e:
-                print(f"Failed to delete {path}: {e}")
-                failed += 1
-    
-        status.value = f"✅ Successfully deleted {deleted} images. {failed} failed."
-        delete_list.clear()
-    
-        # Refresh the image list
-        image_paths.clear()
-        for root, _, files in os.walk(image_dir):
-            for file in files:
-                if file.lower().endswith(image_extensions):
-                    full_path = os.path.join(root, file)
-                    if os.path.isfile(full_path):
-                        image_paths.append(full_path)
-    
-        index["i"] = 0
-        show_batch()
-    
-    
-    next_button.on_click(on_next_click)
-    delete_button.on_click(on_delete_click)
-    confirm_delete.on_click(delete_images)
-    
-    display(output)
-    show_batch()
 
+import base64
+import asyncio
+from fastapi import FastAPI, WebSocket
 
 async def setup():
     print("Setup completed.")
@@ -696,8 +473,38 @@ async def downloadModels():
     await run_command("wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth")
 
 
-import asyncio
-from fastapi import FastAPI, WebSocket
+async def manually_check(ws: WebSocket):
+    image_dir = workdir + 'DS_res'
+    batch_size = 10
+    print("Starting manual check...")
+    images_files = []
+    for filename in os.listdir(image_dir):
+        images_files.extend([os.path.join(filename, f) for f in os.listdir(os.path.join(image_dir, filename)) if f.endswith(('.png', '.jpg'))])
+    index = 0
+    print(f"Total images to review: {len(images_files)}")
+    while index < len(images_files):
+        batch_files = images_files[index:index+batch_size]
+        batch_data = []
+
+        for filename in batch_files:
+            path = os.path.join(image_dir, filename)
+            with open(path, "rb") as img_file:
+                encoded = base64.b64encode(img_file.read()).decode('utf-8')
+            batch_data.append({"filename": filename, "data": encoded})
+        
+        # Send batch to app
+        await ws.send_json({"type": "batch", "images": batch_data})
+        print(f"Sent batch {index // batch_size + 1} with {len(batch_files)} images for review.")
+        # Wait for response
+        response = await ws.receive_json()
+        print(f"received {response}")
+        if response.get("action") == "finish":
+            break
+        
+        index += batch_size
+
+    print("Manual check completed.")
+
 
 FUNCTION_REGISTRY = {
     "setup": setup,
@@ -745,8 +552,24 @@ async def ws_endpoint(ws: WebSocket):
                     tag_name = tag.get("name") if isinstance(tag, dict) else tag
                     if not tag_name:
                         continue
-                    task = asyncio.create_task(execute_function(tag_name))
+
+                    if tag_name == "manually_check":
+                        await manually_check(ws)  
+                        print(f"✅ Finished: {tag_name}")  
+                        continue
+                    else:
+                        task = asyncio.create_task(execute_function(tag_name))
+                        
                     active_tasks[tag_name] = task
+            elif data["action"] == "delete":
+                print("Received delete command")
+                images_to_delete = data.get("images", [])
+                image_dir = workdir + 'DS_res'
+                for filename in images_to_delete:
+                    path = os.path.join(image_dir, filename)
+                    if os.path.exists(path):
+                        os.remove(path)
+                        print(f"Deleted: {filename}")
 
     except Exception:
         pass

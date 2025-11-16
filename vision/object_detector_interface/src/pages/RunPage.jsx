@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import UploadDataset from '../_components/RunPipeline/UploadDataset';
-import PipelineParams from '../_components/RunPipeline/PipelineParams';
-import ProgressTracker from '../_components/RunPipeline/ProgressTracker';
 import CellRunner from '../_components/RunPipeline/CellRunner';
 
 //export const ws = new WebSocket("ws://localhost:8000/ws");
@@ -18,13 +15,12 @@ function connectWebSocket() {
   };
 
   ws.onclose = () => {
-  console.log("⚠️ WebSocket cerrado. Reintentando en 2s...");
-  ws = null;
-  setTimeout(() => {
-    connectWebSocket();
-  }, 2000);
-};
-
+    console.log("⚠️ WebSocket cerrado. Reintentando en 2s...");
+    ws = null;
+    setTimeout(() => {
+      connectWebSocket();
+    }, 2000);
+  };
 }
 
 connectWebSocket();
@@ -36,6 +32,8 @@ const cells = [
   'crop',
   'resize',
   'segment',
+  'crop_precessed',
+  'manually_check'
 ]
 const RunPage = ({ onRunComplete }) => {
 
@@ -47,25 +45,9 @@ const RunPage = ({ onRunComplete }) => {
 
   const steps = ['Data Loaded', 'Resolution Adjustment', 'Silhouette Extraction', 'Background Generation', 'Training'];
 
-  const simulateRun = () => {
-    setIsRunning(true);
-    setCurrentStep(0);
-    
-    const interval = setInterval(() => {
-      setCurrentStep(prev => {
-        if (prev >= steps.length - 1) {
-          clearInterval(interval);
-          setIsRunning(false);
-          onRunComplete && onRunComplete();
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 2000);
-  };
-
   return (
     <div className="mt-12 p-8">
+      <img src="../../../object_detector/DS_res/Cat/141.png" alt="Logo" width={150} height={150} className="mb-8" />
       <button 
         onClick={() => navigate('/')} 
         className="text-purple-300 hover:text-white mb-6 flex items-center gap-2"

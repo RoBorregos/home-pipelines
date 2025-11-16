@@ -1,17 +1,22 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ChevronDown, Play, Square, SquareArrowDown, Trash } from 'lucide-react';
 import { ws, ws2 } from '../../pages/RunPage';
+import ManuallyCheck from './ManuallyCheck';
 
 const CellRunner = ({ tag }) => {
-    // Keep websocket handlers as-is (visual-only changes requested).
-    ws2.onmessage = (msg) => {
-        // message content is not altered; we only append for display
-        console.log("LOG:", msg.data);
-        setLogs((s) => [...s, msg.data]);
-        if(msg.data.includes("Finished")){
-            setRunning(false);
-        }
-    };
+  // All
+  const manuallyRef = useRef(null);
+
+  ws2.onmessage = (msg) => {
+    console.log("LOG:", msg.data);
+    setLogs((s) => [...s, msg.data]);
+    if(msg.data.includes("Finished")){
+      setRunning(false);
+      if (tag === "manually_check" && manuallyRef.current?.sendDeletedImages) {
+        manuallyRef.current.sendDeletedImages();
+      }
+    }
+  };
 
     const wsRun = (tag) => {
         ws.send(JSON.stringify({
@@ -71,18 +76,15 @@ const CellRunner = ({ tag }) => {
     return 'info';
   };
 
-  // Render logs as a single scrollable block (user requested single block, not a box per log)
   const handleCopyAll = async () => {
     try {
       await navigator.clipboard.writeText(logs.join('\n'));
     } catch (e) {
-      // ignore clipboard errors (UX only)
     }
   };
 
   const LogBlock = () => {
     return (
-      // Make the log block more opaque/visible per user request
       <div className="bg-slate-800/80 rounded p-3 font-mono text-xs text-slate-100 ring-1 ring-slate-700">
         {logs.map((text, i) => {
           const level = detectLevel(text);
@@ -99,7 +101,7 @@ const CellRunner = ({ tag }) => {
   };
 
   return (
-  <div className="bg-slate-800/90 rounded-lg p-4 shadow-md border border-slate-700">
+  <div className="w-full bg-slate-800/90 rounded-lg p-4 shadow-md border border-slate-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 bg-slate-700/30 p-2 rounded-md">
           <button onClick={() => setOpen(!open)} aria-label={open ? 'Cerrar' : 'Abrir'} className="p-1 rounded text-slate-200 hover:text-white">
@@ -151,6 +153,7 @@ const CellRunner = ({ tag }) => {
           )}
         </div>
       )}
+      {tag === "manually_check" && open && (<ManuallyCheck ref={manuallyRef} />)}
     </div>
   );
 };
