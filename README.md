@@ -10,6 +10,7 @@ Jupyter notebooks pipelines for the @home competition.
 | ------------------ | --------------------------------------------------------------- | ---------------------------------------- | ------------------------- |
 | Gilberto Malagamba | [A00839075@tec.mx](mailto:A00839075@tec.mx)                     | [@GilMM27](https://github.com/GilMM27)   | Programming & Integration |
 | Oscar Arreola      | [oscar.arreola.jr@gmail.com](mailto:oscar.arreola.jr@gmail.com) | [@Oscar-gg](https://github.com/Oscar-gg) | Programming & Integration |
+| Fernando Hernandez Cantu      | [fernando_hdz_cantu@hotmail.com](mailto:fernando_hdz_cantu@hotmail.com) | [@Fernando94654](https://github.com/Fernando94654) | Programming & Integration |
 
 ## License
 

@@ -1,1 +1,3 @@
 object_detector/content
+object_detector/images
+object_detector/processed
