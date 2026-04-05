@@ -14,6 +14,7 @@ services:
     volumes:
       - ./notebooks:/content/notebooks
       - ./content:/content
+      - ./:/app
     ports:
       - "8888:8888"
     runtime: nvidia

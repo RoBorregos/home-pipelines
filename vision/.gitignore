@@ -1,3 +1,26 @@
 object_detector/content
 object_detector/images
 object_detector/processed
+object_detector/sam3
+object_detector/journal/
+object_detector/myenv
+object_detector/venv
+object_detector/bg
+object_detector/dsyolo_test_jul5_1
+object_detector/mar31
+object_detector/segmented
+object_detector/cropped
+object_detector/crops
+object_detector/runs
+object_detector/models/groundingdino_swint_ogc.pth
+**.pt
+
+# Shared resources — ignore contents but track .gitkeep
+object_detector/models/*
+!object_detector/models/.gitkeep
+object_detector/backgrounds/*
+!object_detector/backgrounds/.gitkeep
+
+# Pipeline runs — per-experiment data
+object_detector/pipeline_runs/*
+!object_detector/pipeline_runs/.gitkeep
