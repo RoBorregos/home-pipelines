@@ -881,7 +881,7 @@ if __name__ == "__main__":
                 batch_size=config["tts_batch_size"],
                 noise_scales=[0.98],
                 noise_scale_ws=[0.98],
-                length_scales=[0.75, 1.0, 1.25],
+                length_scales=[1.0, 1.25, 1.5],
                 output_dir=positive_train_output_dir,
                 auto_reduce_batch_size=True,
                 file_names=[
@@ -906,7 +906,7 @@ if __name__ == "__main__":
                 batch_size=config["tts_batch_size"],
                 noise_scales=[1.0],
                 noise_scale_ws=[1.0],
-                length_scales=[0.75, 1.0, 1.25],
+                length_scales=[1.0, 1.25, 1.5],
                 output_dir=positive_test_output_dir,
                 auto_reduce_batch_size=True,
             )
@@ -938,7 +938,7 @@ if __name__ == "__main__":
                 batch_size=config["tts_batch_size"] // 7,
                 noise_scales=[0.98],
                 noise_scale_ws=[0.98],
-                length_scales=[0.75, 1.0, 1.25],
+                length_scales=[1.0, 1.25, 1.5],
                 output_dir=negative_train_output_dir,
                 auto_reduce_batch_size=True,
                 file_names=[
@@ -973,7 +973,7 @@ if __name__ == "__main__":
                 batch_size=config["tts_batch_size"] // 7,
                 noise_scales=[1.0],
                 noise_scale_ws=[1.0],
-                length_scales=[0.75, 1.0, 1.25],
+                length_scales=[1.0, 1.25, 1.5],
                 output_dir=negative_test_output_dir,
                 auto_reduce_batch_size=True,
             )
