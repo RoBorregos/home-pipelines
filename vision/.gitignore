@@ -1,3 +1,11 @@
 object_detector/content
-object_detector/images
 object_detector/processed
+object_detector/venv
+**.pt
+
+# Shared resources
+object_detector/models/*
+object_detector/backgrounds/*
+
+# Pipeline runs
+object_detector/pipeline_runs/*
