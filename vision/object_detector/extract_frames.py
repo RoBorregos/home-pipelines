@@ -19,12 +19,12 @@ def extract_frames(video_path, output_dir):
     ]
 
     subprocess.run(cmd, check=True)
-    print(f"Frames extraídos en: {output_dir}")
+    print(f"Frames extracted in: {output_dir}")
 
 
 def process_directory(videos_dir, output_dir):
     if not os.path.isdir(videos_dir):
-        print(f"Error: el directorio '{videos_dir}' no existe.")
+        print(f"Error: '{videos_dir}' not found.")
         sys.exit(1)
 
     videos = [
@@ -33,7 +33,7 @@ def process_directory(videos_dir, output_dir):
     ]
 
     if not videos:
-        print(f"No se encontraron videos en '{videos_dir}'.")
+        print(f"Not videos found '{videos_dir}'.")
         sys.exit(1)
 
     for video in videos:
@@ -43,12 +43,12 @@ def process_directory(videos_dir, output_dir):
         print(f"Procesando: {video}")
         extract_frames(video_path, folder_out)
 
-    print(f"\nTodos los videos procesados. Resultados en: {output_dir}")
+    print(f"\nAll frames proccesed in: {output_dir}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print(f"Uso: python {sys.argv[0]} <directorio_videos> <directorio_destino>")
+        print(f"Use: python {sys.argv[0]} <videos_directory> <output_directory>")
         sys.exit(1)
 
     process_directory(sys.argv[1], sys.argv[2])
