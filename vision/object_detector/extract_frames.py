@@ -1,3 +1,6 @@
+""" Script for extracting frames from videos in a specified directory using ffmpeg. 
+    Usage: python extract_frames.py <videos_directory> <output_directory>
+"""
 import subprocess
 import sys
 import os
