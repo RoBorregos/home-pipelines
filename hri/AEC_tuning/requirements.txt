@@ -1,0 +1,18 @@
+# Kokoro TTS for generating Frida's voice
+kokoro>=0.8
+soundfile
+scipy
+numpy
+
+# DeepFilterNet fine-tuning
+deepfilternet>=0.5
+torch>=2.0
+torchaudio>=2.0
+
+# Dataset generation
+librosa
+audiomentations
+pyroomacoustics
+
+# WebRTC AEC simulation
+# pyaec  # SpeexDSP wrapper (optional, for comparison)
