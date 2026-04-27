@@ -75,6 +75,27 @@ def download_librispeech_dev_clean(output_dir: str):
     print(f"  Done. {len(flac_files)} files in {flat_dir}")
 
 
+def download_deepfilternet3(output_dir: str):
+    """Download pre-trained DeepFilterNet3 model (~8MB)."""
+    url = "https://github.com/Rikorose/DeepFilterNet/raw/main/models/DeepFilterNet3.zip"
+    model_dir = os.path.join(output_dir, "DeepFilterNet3")
+    archive = os.path.join(output_dir, "DeepFilterNet3.zip")
+
+    if os.path.isdir(model_dir) and os.listdir(model_dir):
+        print("  DeepFilterNet3 model already exists.")
+        return
+
+    download_file(url, archive)
+
+    print("  Extracting...")
+    os.makedirs(output_dir, exist_ok=True)
+    with zipfile.ZipFile(archive, "r") as zf:
+        zf.extractall(output_dir)
+    os.remove(archive)
+
+    print(f"  Done. Model in {model_dir}")
+
+
 def download_ms_snsd(output_dir: str):
     """Download MS-SNSD noise dataset."""
     url = "https://github.com/microsoft/MS-SNSD/archive/refs/heads/master.zip"
@@ -102,6 +123,10 @@ def main():
         help="Base output directory",
     )
     parser.add_argument(
+        "--model_dir", type=str, default=None,
+        help="Output directory for DeepFilterNet3 model (default: <script_dir>/assets/downloads)",
+    )
+    parser.add_argument(
         "--skip_speech", action="store_true",
         help="Skip downloading clean speech dataset",
     )
@@ -109,20 +134,34 @@ def main():
         "--skip_noise", action="store_true",
         help="Skip downloading noise dataset",
     )
+    parser.add_argument(
+        "--skip_model", action="store_true",
+        help="Skip downloading DeepFilterNet3 model",
+    )
     args = parser.parse_args()
 
-    print("Downloading datasets for AEC fine-tuning...\n")
+    # Default model_dir next to this script: AEC_tuning/assets/downloads/
+    if args.model_dir is None:
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        args.model_dir = os.path.join(script_dir, "assets", "downloads")
+
+    print("Downloading datasets and model for AEC fine-tuning...\n")
+
+    if not args.skip_model:
+        print("[1/3] DeepFilterNet3 pre-trained model")
+        download_deepfilternet3(args.model_dir)
 
     if not args.skip_speech:
-        print("[1/2] LibriSpeech dev-clean (clean speech targets)")
+        print("\n[2/3] LibriSpeech dev-clean (clean speech targets)")
         download_librispeech_dev_clean(args.output_dir)
 
     if not args.skip_noise:
-        print("\n[2/2] MS-SNSD (ambient noise)")
+        print("\n[3/3] MS-SNSD (ambient noise)")
         download_ms_snsd(args.output_dir)
 
     print("\n" + "=" * 50)
     print("Downloads complete!")
+    print(f"  Model: {args.model_dir}/DeepFilterNet3/")
     print(f"  Clean speech: {args.output_dir}/clean_speech/")
     print(f"  Noise: {args.output_dir}/noise/")
     print("\nNext steps:")
