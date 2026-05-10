@@ -134,16 +134,18 @@ def _segment_image(
         logger.warning("  No detections: %s", img_path.name)
         return 0
 
-    sam3_state = sam3_processor.set_image(image_pil.copy())
-    sam3_state = sam3_processor.set_text_prompt(prompt=class_name, state=sam3_state)
+    with torch.autocast(device_type=device, dtype=torch.bfloat16):
+        sam3_state = sam3_processor.set_image(image_pil.copy())
+        sam3_state = sam3_processor.set_text_prompt(prompt=class_name, state=sam3_state)
 
     saved = 0
     for i, (box, _) in enumerate(zip(boxes, phrases)):
         x0, y0, x1, y1 = _box_to_xyxy(box, W, H)
         norm_box = _xyxy_to_cxcywh_norm(x0, y0, x1, y1, W, H)
 
-        sam3_state["geometric_prompt"] = sam3_processor.model._get_dummy_prompt()
-        sam3_state = sam3_processor.add_geometric_prompt(box=norm_box, label=True, state=sam3_state)
+        with torch.autocast(device_type=device, dtype=torch.bfloat16):
+            sam3_state["geometric_prompt"] = sam3_processor.model._get_dummy_prompt()
+            sam3_state = sam3_processor.add_geometric_prompt(box=norm_box, label=True, state=sam3_state)
 
         masks = sam3_state.get("masks")
         scores = sam3_state.get("scores")
