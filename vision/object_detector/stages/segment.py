@@ -26,9 +26,11 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic"}
 
 
 def _ensure_importable():
-    for p in [str(_MODELS_DIR / "GroundingDINO"), str(_MODELS_DIR / "sam3")]:
-        if p not in sys.path and Path(p).exists():
-            sys.path.insert(0, p)
+    # GroundingDINO is installed via groundingdino-py (compiled _C extension).
+    # Only sam3 needs a manual path since it has no PyPI package.
+    p = str(_MODELS_DIR / "sam3")
+    if p not in sys.path and Path(p).exists():
+        sys.path.insert(0, p)
 
 
 # ── GroundingDINO helpers ────────────────────────────────────────────────────

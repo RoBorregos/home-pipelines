@@ -20,7 +20,7 @@ services:
     working_dir: /app
     environment:
       - PIPELINE_API_KEY=${PIPELINE_API_KEY:-TESTING*/*1234567890}
-      - PYTHONPATH=/app/models/GroundingDINO:/app/models/sam3
+      - PYTHONPATH=/app/models/sam3
     command: uvicorn service:app --host 0.0.0.0 --port 8000 --workers 1
     networks:
       - yolo-home-net
