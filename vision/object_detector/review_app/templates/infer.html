@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inference</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #222;
+      --border: #2a2a2a; --text: #e0e0e0; --muted: #666;
+      --blue: #2563eb; --green: #16a34a; --red: #c0392b;
+    }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header {
+      display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 0.92rem; font-weight: 700; }
+    .back { font-size: 0.8rem; color: var(--muted); text-decoration: none; }
+    .back:hover { color: var(--text); }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+    .controls {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 0.75rem; color: var(--muted); }
+    input[type=text], input[type=number], input[type=range] {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 6px 10px; font-size: 0.82rem;
+    }
+    input[type=range] { padding: 4px 0; width: 140px; cursor: pointer; }
+    .conf-val { font-size: 0.82rem; min-width: 32px; }
+
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 40px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--muted); font-size: 0.88rem;
+    }
+    .drop-zone.over { border-color: var(--blue); background: #1d3461; color: var(--text); }
+    .drop-zone input { display: none; }
+
+    .btn {
+      padding: 8px 18px; border-radius: 7px; border: none; cursor: pointer;
+      font-size: 0.84rem; font-weight: 600;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface2); }
+
+    .images {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .img-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .img-card .label {
+      padding: 8px 12px; font-size: 0.75rem; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .img-card img {
+      width: 100%; display: block; max-height: 420px; object-fit: contain;
+      background: #111;
+    }
+    .img-placeholder {
+      width: 100%; height: 220px; display: flex; align-items: center;
+      justify-content: center; color: var(--muted); font-size: 0.8rem;
+      background: #111;
+    }
+
+    #status { font-size: 0.8rem; padding: 6px 0; min-height: 1.4em; }
+    .err { color: #fca5a5; }
+    .ok  { color: #86efac; }
+
+    @media (max-width: 560px) {
+      .images { grid-template-columns: 1fr; }
+      .controls { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="back">← Dashboard</a>
+  <h1>Inference</h1>
+  <span id="model-label" style="font-size:0.75rem;color:var(--muted);margin-left:auto"></span>
+</header>
+
+<div class="container">
+
+  <div class="controls">
+    <div class="field" style="flex:1;min-width:200px">
+      <label>API Key</label>
+      <input type="text" id="api-key" placeholder="your-api-key" />
+    </div>
+    <div class="field">
+      <label>Confidence: <span class="conf-val" id="conf-val">0.25</span></label>
+      <input type="range" id="conf" min="0.05" max="0.95" step="0.05" value="0.25"
+             oninput="document.getElementById('conf-val').textContent=parseFloat(this.value).toFixed(2)" />
+    </div>
+    <button class="btn btn-primary" id="btn-run" onclick="runInfer()" disabled>▶ Run</button>
+  </div>
+
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept="image/*" onchange="onFileSelect(this.files[0])" />
+    Drag & drop an image here, or click to select
+  </div>
+
+  <p id="status"></p>
+
+  <div class="images" id="images" style="margin-top:16px;display:none">
+    <div class="img-card">
+      <div class="label">Original</div>
+      <img id="img-original" src="" alt="original" />
+    </div>
+    <div class="img-card">
+      <div class="label">Annotated</div>
+      <div class="img-placeholder" id="img-annotated-placeholder">Run inference to see result</div>
+      <img id="img-annotated" src="" alt="annotated" style="display:none" />
+    </div>
+  </div>
+
+</div>
+
+<script src="/static/infer.js"></script>
+</body>
+</html>

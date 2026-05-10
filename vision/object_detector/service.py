@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 import os
 import re
@@ -7,10 +8,13 @@ import tempfile
 from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+import cv2
+import numpy as np
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 from pydantic import BaseModel
 
 import pipeline_runner
@@ -48,8 +52,12 @@ def dashboard(request: Request):
 
 @app.get("/review")
 def review_page(request: Request):
-    s = ps.load()
     return templates.TemplateResponse(request, "review.html", {"class_name": ""})
+
+
+@app.get("/infer")
+def infer_page(request: Request):
+    return templates.TemplateResponse(request, "infer.html")
 
 
 # ── Status & runs ─────────────────────────────────────────────────────────────
@@ -380,6 +388,39 @@ def review_approve(x_api_key: str = Header(None)):
     s.review_done = True
     ps.save(s)
     return {"review_done": True}
+
+
+# ── Inference ─────────────────────────────────────────────────────────────────
+
+_infer_model = None
+_infer_model_path: str = ""
+
+
+@app.post("/infer")
+async def infer(
+    file: UploadFile = File(...),
+    conf: float = 0.25,
+    x_api_key: str = Header(None),
+):
+    _auth(x_api_key)
+    s = ps.load()
+    if not s.best_weights or not Path(s.best_weights).exists():
+        raise HTTPException(status_code=404, detail="No trained model found for active run")
+
+    global _infer_model, _infer_model_path
+    if _infer_model_path != s.best_weights:
+        from ultralytics import YOLO
+        _infer_model = YOLO(s.best_weights)
+        _infer_model_path = s.best_weights
+
+    img_bytes = await file.read()
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+    results = _infer_model.predict(img, conf=conf, verbose=False)
+    annotated = results[0].plot()  # BGR numpy array
+
+    _, buf = cv2.imencode(".jpg", annotated)
+    return Response(content=buf.tobytes(), media_type="image/jpeg")
 
 
 # ── Image serving — mount runs/ so all run images are accessible ──────────────

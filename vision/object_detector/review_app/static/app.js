@@ -197,7 +197,10 @@
       card("train", "active"); badge("train", "running…", "running"); numEl("train", "active", 5);
     } else if (s.train_done) {
       card("train", "done"); badge("train", "done", "done"); numEl("train", "done", 5);
-      if (s.best_weights) document.getElementById("best-weights").textContent = "best.pt ready";
+      if (s.best_weights) {
+        document.getElementById("best-weights").textContent = "best.pt ready";
+        document.getElementById("btn-infer").style.display = "";
+      }
     } else {
       card("train", ""); badge("train", "idle", "idle"); numEl("train", "", 5);
     }
