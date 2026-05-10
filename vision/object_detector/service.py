@@ -43,13 +43,13 @@ def _safe_child(raw: str, base: Path) -> Path:
 
 @app.get("/")
 def dashboard(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/review")
 def review_page(request: Request):
     s = ps.load()
-    return templates.TemplateResponse("review.html", {"request": request, "class_name": ""})
+    return templates.TemplateResponse(request, "review.html", {"class_name": ""})
 
 
 # ── Status & runs ─────────────────────────────────────────────────────────────
