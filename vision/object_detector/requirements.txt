@@ -1,22 +1,30 @@
---extra-index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cu128
 torch==2.6.0
 torchaudio==2.6.0
 torchvision==0.21.0
+transformers==4.30.0
+
+# ML
 numpy
 opencv-python
 pillow
 pycocotools
 pyyaml
-torch
 ultralytics
 matplotlib
 imutils
 argparse
 groundingdino-py
 segment-anything
-ipywidgets
 iopath
 einops
 ftfy
 numba
 ipywidgets
+
+# Web service
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+gdown

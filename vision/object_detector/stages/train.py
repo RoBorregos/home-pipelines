@@ -33,7 +33,10 @@ def run(
     if not data_yaml.exists():
         raise FileNotFoundError(f"data.yaml not found: {data_yaml}")
 
-    save_dir = str(data_yaml.parent / "training_results")
+    # data.yaml is at pipeline_runs/{name}/dataset/data.yaml
+    # training output goes to pipeline_runs/{name}/training/yolo/ (mirrors notebook)
+    run_dir = data_yaml.parent.parent
+    project  = str(run_dir / "training")
     logger.info("Training YOLO on %s", data_yaml)
     logger.info("Device: %s | Epochs: %d | Batch: %d", device, epochs, batch)
 
@@ -59,10 +62,11 @@ def run(
         cache=True,
         amp=True,
         device=device,
-        save_dir=save_dir,
+        project=project,
+        name="yolo",
     )
 
-    best = Path(save_dir) / "train" / "weights" / "best.pt"
+    best = Path(project) / "yolo" / "weights" / "best.pt"
     logger.info("Training complete. Best weights: %s", best)
     logger.info("Stage complete.")
     return str(best)
