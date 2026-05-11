@@ -6,6 +6,9 @@ object_detector/venv
 # Shared resources
 object_detector/models/*
 object_detector/backgrounds/*
+**.env
 
 # Pipeline runs
 object_detector/pipeline_runs/*
+**/logs/*
+pipeline_state.json
