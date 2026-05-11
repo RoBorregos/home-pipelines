@@ -11,15 +11,30 @@
       --border: #2a2a2a; --text: #e0e0e0; --muted: #666;
       --blue: #2563eb; --green: #16a34a; --red: #c0392b;
     }
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
     header {
-      display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px;
       background: var(--surface); border-bottom: 1px solid var(--border);
+      min-width: 0;
     }
-    header h1 { font-size: 0.92rem; font-weight: 700; }
-    .back { font-size: 0.8rem; color: var(--muted); text-decoration: none; }
+    header h1 { font-size: 0.92rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    .back { font-size: 0.8rem; color: var(--muted); text-decoration: none; white-space: nowrap; flex-shrink: 0; }
     .back:hover { color: var(--text); }
+    #model-label {
+      font-size: 0.75rem; color: var(--muted);
+      margin-left: auto; flex-shrink: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-api-key {
+      flex-shrink: 0; white-space: nowrap;
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 6px; padding: 5px 10px; font-size: 0.76rem; cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      #model-label { display: none; }
+    }
 
     .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 
@@ -94,12 +109,8 @@
 <header>
   <a href="/" class="back">← Dashboard</a>
   <h1>Inference</h1>
-  <span id="model-label" style="font-size:0.75rem;color:var(--muted);margin-left:auto"></span>
-  <button onclick="resetApiKey()"
-    style="background:transparent;border:1px solid var(--border);color:var(--muted);
-           border-radius:6px;padding:5px 12px;font-size:0.76rem;cursor:pointer;white-space:nowrap">
-    API key
-  </button>
+  <span id="model-label"></span>
+  <button class="btn-api-key" onclick="resetApiKey()">API key</button>
 </header>
 
 <div class="container">
