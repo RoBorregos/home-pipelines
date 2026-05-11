@@ -168,6 +168,11 @@
 <header>
   <h1>Review — <strong id="hdr-class">select a class</strong></h1>
   <span class="meta" id="header-meta"></span>
+  <button onclick="resetApiKey()"
+    style="background:#2a2a2a;color:#ccc;border:none;border-radius:6px;
+           padding:5px 12px;font-size:0.76rem;cursor:pointer;white-space:nowrap;flex-shrink:0">
+    API key
+  </button>
 </header>
 
 <div class="class-bar" id="class-bar">
@@ -187,6 +192,7 @@
 <div class="pagination" id="pagination"></div>
 <div id="status-bar"></div>
 
+<script src="/static/auth.js"></script>
 <script src="/static/review.js"></script>
 </body>
 </html>

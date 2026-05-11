@@ -1,6 +1,3 @@
-const KEY_STORE = "pipeline_api_key";
-
-const apiKeyInput = document.getElementById("api-key");
 const btnRun      = document.getElementById("btn-run");
 const dropZone    = document.getElementById("drop-zone");
 const status      = document.getElementById("status");
@@ -13,9 +10,6 @@ const modelLabel  = document.getElementById("model-label");
 let selectedFile = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-
-apiKeyInput.value = sessionStorage.getItem(KEY_STORE) || "";
-apiKeyInput.addEventListener("input", () => sessionStorage.setItem(KEY_STORE, apiKeyInput.value.trim()));
 
 fetch("/status").then(r => r.json()).then(s => {
   if (s.best_weights) {
@@ -42,7 +36,6 @@ function onFileSelect(file) {
   selectedFile = file;
   dropZone.textContent = file.name;
   btnRun.disabled = false;
-  // show original preview
   const url = URL.createObjectURL(file);
   imgOrig.src = url;
   imgAnn.style.display = "none";
@@ -56,7 +49,6 @@ function onFileSelect(file) {
 
 async function runInfer() {
   if (!selectedFile) return;
-  const key  = apiKeyInput.value.trim();
   const conf = document.getElementById("conf").value;
 
   btnRun.disabled = true;
@@ -69,7 +61,7 @@ async function runInfer() {
   try {
     const res = await fetch(`/infer?conf=${conf}`, {
       method: "POST",
-      headers: { "x-api-key": key },
+      headers: { "x-api-key": getApiKey() },
       body: form,
     });
 

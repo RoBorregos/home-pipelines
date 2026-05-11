@@ -1,10 +1,4 @@
 (() => {
-  const API_KEY = (() => {
-    let k = sessionStorage.getItem("api_key");
-    if (!k) { k = prompt("API key:") || ""; sessionStorage.setItem("api_key", k); }
-    return k;
-  })();
-
   const PAGE_SIZE = 48;
   let currentClass = "";
   let currentPage  = 0;
@@ -159,7 +153,7 @@
     if (!confirm("Mark all classes as reviewed? This enables the Generate stage.")) return;
     const res = await fetch("/review/approve", {
       method: "POST",
-      headers: { "x-api-key": API_KEY },
+      headers: { "x-api-key": getApiKey() },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

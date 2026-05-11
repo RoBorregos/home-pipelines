@@ -1,10 +1,4 @@
 (() => {
-  // API key stored in session so you only type it once per browser session
-  const API_KEY = (() => {
-    let k = sessionStorage.getItem("api_key");
-    if (!k) { k = prompt("API key:") || ""; sessionStorage.setItem("api_key", k); }
-    return k;
-  })();
 
   let sseSource  = null;
   let pollTimer  = null;
@@ -21,7 +15,7 @@
   async function api(method, path, body) {
     const res = await fetch(path, {
       method,
-      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     if (!res.ok) {

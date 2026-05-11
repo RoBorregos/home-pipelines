@@ -95,15 +95,16 @@
   <a href="/" class="back">← Dashboard</a>
   <h1>Inference</h1>
   <span id="model-label" style="font-size:0.75rem;color:var(--muted);margin-left:auto"></span>
+  <button onclick="resetApiKey()"
+    style="background:transparent;border:1px solid var(--border);color:var(--muted);
+           border-radius:6px;padding:5px 12px;font-size:0.76rem;cursor:pointer;white-space:nowrap">
+    API key
+  </button>
 </header>
 
 <div class="container">
 
   <div class="controls">
-    <div class="field" style="flex:1;min-width:200px">
-      <label>API Key</label>
-      <input type="text" id="api-key" placeholder="your-api-key" />
-    </div>
     <div class="field">
       <label>Confidence: <span class="conf-val" id="conf-val">0.25</span></label>
       <input type="range" id="conf" min="0.05" max="0.95" step="0.05" value="0.25"
@@ -133,6 +134,7 @@
 
 </div>
 
+<script src="/static/auth.js"></script>
 <script src="/static/infer.js"></script>
 </body>
 </html>
