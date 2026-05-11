@@ -189,14 +189,14 @@
     // Train card
     if (running === "train") {
       card("train", "active"); badge("train", "running…", "running"); numEl("train", "active", 5);
+      document.getElementById("btn-infer").style.display = "none";
     } else if (s.train_done) {
       card("train", "done"); badge("train", "done", "done"); numEl("train", "done", 5);
-      if (s.best_weights) {
-        document.getElementById("best-weights").textContent = "best.pt ready";
-        document.getElementById("btn-infer").style.display = "";
-      }
+      document.getElementById("btn-infer").style.display = "";
+      document.getElementById("best-weights").textContent = s.best_weights ? "best.pt ready" : "";
     } else {
       card("train", ""); badge("train", "idle", "idle"); numEl("train", "", 5);
+      document.getElementById("btn-infer").style.display = "none";
     }
 
     // Button states
