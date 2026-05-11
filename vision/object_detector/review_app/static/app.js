@@ -293,6 +293,6 @@
     const s = await poll();
     await loadRuns(s?.run_name || "");
     startPolling();
-    if (s?.running) { window.loadLog(); }
+    if (s?.running) { startSSE(); }
   })();
 })();

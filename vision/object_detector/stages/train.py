@@ -40,8 +40,23 @@ def run(
     logger.info("Training YOLO on %s", data_yaml)
     logger.info("Device: %s | Epochs: %d | Batch: %d", device, epochs, batch)
 
+    # Pipe ultralytics output to our log file
+    ul_logger = logging.getLogger("ultralytics")
+    for h in logging.getLogger("stages").handlers:
+        ul_logger.addHandler(h)
+
+    def _on_epoch_end(trainer):
+        e = trainer.epoch + 1
+        n = trainer.epochs
+        m = trainer.metrics or {}
+        box  = m.get("train/box_loss", 0)
+        cls  = m.get("train/cls_loss", 0)
+        map50 = m.get("metrics/mAP50(B)", 0)
+        logger.info("Epoch %d/%d | box=%.4f  cls=%.4f  mAP50=%.4f", e, n, box, cls, map50)
+
     local_weights = _MODELS_DIR / model
     yolo = YOLO(str(local_weights) if local_weights.exists() else model)
+    yolo.add_callback("on_fit_epoch_end", _on_epoch_end)
     yolo.train(
         data=str(data_yaml),
         epochs=epochs,

@@ -5,7 +5,7 @@
     return k;
   })();
 
-  const PAGE_SIZE = 24;
+  const PAGE_SIZE = 48;
   let currentClass = "";
   let currentPage  = 0;
   let totalImages  = 0;

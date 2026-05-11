@@ -202,8 +202,9 @@ def run(
     train_dir = out / "train"
 
     for img_id in range(images_to_generate):
-        if img_id % 500 == 0:
-            logger.info("  %d / %d", img_id, images_to_generate)
+        if img_id % 100 == 0:
+            pct = img_id * 100 // images_to_generate
+            logger.info("  %d / %d  (%d%%)", img_id, images_to_generate, pct)
 
         label_path = train_dir / "labels" / f"{img_id}.txt"
         label_path.write_text("")

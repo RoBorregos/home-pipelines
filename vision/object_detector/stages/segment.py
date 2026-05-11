@@ -223,19 +223,25 @@ def run(
 
         cropped_class.mkdir(parents=True, exist_ok=True)
         images = [f for f in class_dir.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS]
-        logger.info("--- %s (%d images) ---", class_dir.name, len(images))
+        n_images = len(images)
+        logger.info("--- %s (%d images) ---", class_dir.name, n_images)
 
-        for img_path in images:
+        class_saved = 0
+        for idx, img_path in enumerate(images):
             try:
                 n = _segment_image(
                     img_path, class_dir.name, cropped_class,
                     grounding_model, sam3_processor,
                     device, box_threshold, text_threshold,
                 )
-                logger.info("  %s → %d segments", img_path.name, n)
+                class_saved += n
                 total += n
             except Exception as exc:
                 logger.error("  Failed %s: %s", img_path.name, exc)
+            if (idx + 1) % 10 == 0 or (idx + 1) == n_images:
+                pct = (idx + 1) * 100 // n_images
+                logger.info("  [%s] %d%% (%d/%d images, %d saved)",
+                            class_dir.name, pct, idx + 1, n_images, class_saved)
 
     logger.info("Stage complete — %d total cropped segments", total)
 
