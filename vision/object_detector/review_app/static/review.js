@@ -3,17 +3,20 @@
   let currentClass = "";
   let currentPage  = 0;
   let totalImages  = 0;
+  let classList    = [];   // ordered list of all class names
   const selected   = new Set();
 
-  const grid      = document.getElementById("grid");
-  const pagination = document.getElementById("pagination");
-  const meta      = document.getElementById("header-meta");
-  const countEl   = document.getElementById("selection-count");
-  const btnDelete = document.getElementById("btn-delete");
-  const btnApprove = document.getElementById("btn-approve");
+  const grid         = document.getElementById("grid");
+  const pagination   = document.getElementById("pagination");
+  const meta         = document.getElementById("header-meta");
+  const countEl      = document.getElementById("selection-count");
+  const btnDelete    = document.getElementById("btn-delete");
+  const btnApprove   = document.getElementById("btn-approve");
   const btnSelectAll = document.getElementById("btn-select-all");
-  const btnClear  = document.getElementById("btn-clear");
-  const statusBar = document.getElementById("status-bar");
+  const btnClear     = document.getElementById("btn-clear");
+  const btnAccept    = document.getElementById("btn-accept-class");
+  const btnReject    = document.getElementById("btn-reject-class");
+  const statusBar    = document.getElementById("status-bar");
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -32,20 +35,25 @@
     });
   }
 
+  function nextClass() {
+    const idx = classList.indexOf(currentClass);
+    return idx >= 0 && idx < classList.length - 1 ? classList[idx + 1] : null;
+  }
+
   // ── Class selector ───────────────────────────────────────────────────────────
 
   async function loadClasses() {
     const s = await fetch("/status").then(r => r.json());
-    const classes = Object.keys(s.segmented_classes || {});
+    classList = Object.keys(s.segmented_classes || {});
     const bar = document.getElementById("class-bar");
     bar.innerHTML = "";
 
-    if (!classes.length) {
+    if (!classList.length) {
       bar.innerHTML = '<span style="color:#555;font-size:0.8rem">No segmented classes yet — run the segment stage first.</span>';
       return;
     }
 
-    classes.forEach(cls => {
+    classList.forEach(cls => {
       const btn = document.createElement("button");
       btn.className = "class-btn";
       btn.textContent = cls;
@@ -53,8 +61,7 @@
       bar.appendChild(btn);
     });
 
-    // Auto-select first class
-    selectClass(classes[0]);
+    selectClass(classList[0]);
   }
 
   function selectClass(cls) {
@@ -67,9 +74,12 @@
       b.classList.toggle("active", b.textContent === cls);
     });
 
+    const hasNext = !!nextClass();
     btnSelectAll.disabled = false;
     btnClear.disabled = false;
     btnApprove.disabled = false;
+    btnAccept.disabled = !hasNext;
+    btnReject.disabled = false;
 
     loadPage(0);
   }
@@ -83,7 +93,8 @@
     totalImages = data.total;
     currentPage = page;
 
-    meta.textContent = `${totalImages} images`;
+    const idx = classList.indexOf(currentClass);
+    meta.textContent = `${totalImages} images  ·  class ${idx + 1} / ${classList.length}`;
 
     if (!data.images.length) {
       grid.innerHTML = '<p class="empty">No images for this class.</p>';
@@ -147,6 +158,34 @@
     selected.clear();
     showStatus(`Deleted ${data.deleted} images`, "success");
     await loadPage(currentPage);
+  });
+
+  // Accept class: keep all images, move to next class
+  btnAccept.addEventListener("click", () => {
+    const next = nextClass();
+    if (!next) return;
+    showStatus(`Class "${currentClass}" accepted`, "success");
+    selectClass(next);
+  });
+
+  // Reject class: delete all images in class, move to next class
+  btnReject.addEventListener("click", async () => {
+    if (!confirm(`Delete ALL images in class "${currentClass}"? This cannot be undone.`)) return;
+    btnReject.disabled = true;
+    showStatus(`Deleting all images in "${currentClass}"…`);
+    const res = await fetch("/review/class/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ class_name: currentClass }),
+    });
+    const data = await res.json();
+    showStatus(`Rejected "${currentClass}" — ${data.deleted} images deleted`, "success");
+    const next = nextClass();
+    if (next) {
+      selectClass(next);
+    } else {
+      await loadPage(0);
+    }
   });
 
   btnApprove.addEventListener("click", async () => {

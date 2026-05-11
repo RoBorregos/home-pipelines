@@ -85,9 +85,9 @@
     #selection-count { font-size: 0.8rem; color: #aaa; }
     .spacer { flex: 1; }
 
-    .grid {
+    #grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
       gap: 8px;
       padding: 16px 20px;
     }
@@ -153,12 +153,11 @@
 
     /* ── Mobile ── */
     @media (max-width: 500px) {
-      .grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; padding: 12px 14px; }
+      #grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 12px 14px; }
       .toolbar { padding: 10px 14px; }
       .class-bar { padding: 10px 14px; }
       header { padding: 10px 14px; }
-      /* Approve button full width on its own row */
-      #btn-approve { width: 100%; order: 10; }
+      #btn-approve, #btn-accept-class, #btn-reject-class { flex: 1; }
       .spacer { display: none; }
     }
   </style>
@@ -185,6 +184,8 @@
   <button class="btn-danger" id="btn-delete" disabled>Delete selected</button>
   <span id="selection-count"></span>
   <div class="spacer"></div>
+  <button class="btn-ghost" id="btn-accept-class" disabled>Accept class →</button>
+  <button class="btn-danger" id="btn-reject-class" disabled>Reject class</button>
   <button class="btn-success" id="btn-approve" disabled>✓ Mark reviewed</button>
 </div>
 

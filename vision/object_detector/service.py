@@ -381,6 +381,25 @@ def review_delete(body: DeleteBody):
     return {"deleted": deleted}
 
 
+class RejectClassBody(BaseModel):
+    class_name: str
+
+
+@app.post("/review/class/reject")
+def review_class_reject(body: RejectClassBody):
+    s = ps.load()
+    if not s.run_name:
+        raise HTTPException(status_code=400, detail="No active run")
+    class_dir = _safe_child(str(RUNS_DIR / s.run_name / "cropped" / body.class_name),
+                            RUNS_DIR / s.run_name / "cropped")
+    if not class_dir.exists():
+        return {"deleted": 0}
+    deleted = sum(1 for f in class_dir.iterdir()
+                  if f.is_file() and f.suffix.lower() in {".png", ".jpg", ".jpeg"}
+                  and not f.unlink())
+    return {"deleted": deleted}
+
+
 @app.post("/review/approve")
 def review_approve(x_api_key: str = Header(None)):
     _auth(x_api_key)
