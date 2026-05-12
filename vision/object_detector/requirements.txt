@@ -1,3 +1,4 @@
+# Use your own PyTorch version and CUDA version here.
 --extra-index-url https://download.pytorch.org/whl/cu128
 torch==2.6.0
 torchaudio==2.6.0

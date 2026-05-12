@@ -41,25 +41,25 @@ object_detector/
 └── logs/                   # Per-stage log files (streamed live to UI)
 ```
 
-### State management
+### How the layers fit together
 
-`state.py` serializes a single `PipelineState` dataclass to `pipeline_state.json` on every write, using an atomic `os.replace` to prevent corruption. The state tracks the active run name, which stage (if any) is currently running, per-stage completion flags (`segment_done`, `review_done`, `generate_done`, `train_done`), and the path to the active log file.
+The backend has three layers with clear responsibilities:
 
-When a run is activated, `activate_run` reconstructs completion flags from the filesystem (e.g., `cropped/` directory presence for `segment_done`, `data.yaml` existence for `generate_done`) so state survives service restarts.
+**`service.py` — API layer.** Receives HTTP requests, validates the API key, and delegates work. It never runs a stage directly — it just calls `pipeline_runner` and returns immediately. Also owns the SSE log stream endpoint and static file serving.
 
-### Stage execution
+**`pipeline_runner.py` — Orchestrator.** The only place that launches threads. When a stage is triggered it opens a dedicated log file, configures the `stages` logger to write to it, marks the stage as running in state, then starts the thread. When the thread finishes it calls `_finish()` or `_fail()` to update state. Only one stage can run at a time — if `state.running` is not empty, the runner rejects the call with an error.
 
-Each stage runs in a `daemon=True` background thread launched by `pipeline_runner`. The runner:
-1. Opens a new log file at `logs/{run}_{stage}_{time}.log`
-2. Sets the `stages` logger to write to it
-3. Calls `state.transition(stage_name, ...)` to mark the stage as running
-4. Starts the thread; thread calls `_finish()` or `_fail()` on completion
+**`stages/` — Workers.** Pure functions that do the actual ML work. Each has a single `run()` entry point, logs progress via the `stages` logger (already wired by the runner), and knows nothing about HTTP or threads.
 
-Only one stage can run at a time — all mutating endpoints check `s.running` and return HTTP 409 if busy.
+```
+Browser → service.py → pipeline_runner.py → Thread → stages/segment.py
+                ↕                   ↕
+           HTTP response       state.py (pipeline_state.json)
+```
 
-### Log streaming
+**`state.py` — Shared memory.** A single JSON file (`pipeline_state.json`) that all layers read and write. Writes are atomic (`os.replace`) to prevent corruption. Stores the active run, which stage is running, per-stage completion flags, and the current log file path. When the service restarts, `activate_run` rebuilds the flags by inspecting the filesystem directly, so no state is lost.
 
-`GET /logs/stream` is a Server-Sent Events endpoint. It tails the active log file in a `while True` loop with 0.3 s sleep, stops when `state.running` becomes empty, and sends a final `[DONE]` or `[ERROR]` event. The frontend opens an `EventSource` as soon as a stage is triggered (and auto-reconnects on page load if a stage is already running).
+**Log streaming.** `GET /logs/stream` is a Server-Sent Events endpoint that tails the active log file every 0.3 s and pushes each new line to the browser. It stops when `state.running` clears and sends a final `[DONE]` or `[ERROR]`. The browser opens this connection the moment a stage starts and auto-reconnects if the page reloads mid-run.
 
 ---
 
@@ -67,47 +67,23 @@ Only one stage can run at a time — all mutating endpoints check `s.running` an
 
 ### 1. Upload (`POST /upload/gdrive`)
 
-- Downloads a public flat Google Drive folder using `gdown --folder`
-- Videos must be named `<ClassName><N>.<ext>` (e.g. `Soap1.mp4`, `Mug2.mp4`)
-- Runs `ffmpeg` at 10 fps to extract frames into `images/{ClassName}/`
-- Already-extracted videos (detected by glob match) are skipped
+Downloads a public flat Google Drive folder with `gdown`, then extracts frames with `ffmpeg` at 10 fps into `images/{ClassName}/`. Videos must be named `<ClassName><N>.<ext>` (e.g. `Soap1.mp4`, `Mug2.mp4`). Already-extracted videos are skipped.
 
 ### 2. Segment (`stages/segment.py`)
 
-- Loads GroundingDINO (SwinT backbone) and SAM3 once, then iterates all class directories
-- For each image: GroundingDINO finds bounding boxes for the class name as text prompt → SAM3 generates masks → best mask selected by score
-- Mask is cleaned with morphological close+open, then the BGRA image is cropped to the tight bounding box and saved as a transparent PNG in `cropped/{ClassName}/`
-- Classes with existing content in `cropped/` are skipped on re-runs
-- Progress logged every 10 images as `[ClassName] NN% (n/total images, k saved)`
+Loads GroundingDINO + SAM3 once, then for each image: GroundingDINO detects bounding boxes using the class name as a text prompt → SAM3 generates a mask → best mask is selected by score → mask is morphologically cleaned and the object is cropped to its tight bounding box and saved as a transparent PNG in `cropped/{ClassName}/`. Classes already present in `cropped/` are skipped. Progress logged every 10 images.
 
 ### 3. Review (`review_app/review.js` + endpoints)
 
-Browser-based image gallery:
-- `GET /review/images?class_name=&page=&page_size=` — paginated image list (48 per page)
-- `POST /review/delete` — delete selected images by path (path traversal protected via `_safe_child`)
-- `POST /review/class/reject` — delete all images for a class
-- `POST /review/approve` — set `review_done = True` (required to unlock Generate)
-
-UI provides per-class navigation with Accept (advance to next class, keep images) and Reject (delete all, advance) shortcuts.
+Browser gallery for inspecting and deleting bad segmented images per class. Supports per-image delete, bulk delete, Accept class (keep all, move to next), and Reject class (delete all, move to next). Marking as reviewed unlocks the Generate stage.
 
 ### 4. Generate dataset (`stages/generate.py`)
 
-Composites segmented objects on random backgrounds to create a synthetic YOLO segmentation dataset:
-- Random number of objects per image (0–8); 10% chance of empty background
-- Objects are randomly scaled (5–35% of background dimensions), slightly rotated (±5°), and augmented (brightness, contrast, saturation, hue, blur, noise, JPEG artifacts, polygon blobs)
-- Overlap detection prevents objects from stacking excessively
-- Labels written as YOLO polygon format (normalized pixel coordinates)
-- After generation, images are split 80/10/10 train/valid/test
-- Progress logged every 100 images as `N / total (NN%)`
-- Output: `dataset/{train,valid,test}/{images,labels}/` + `dataset/data.yaml`
+Composites segmented objects onto random backgrounds to produce a synthetic YOLO dataset. Each image gets 1–8 randomly placed objects (10% chance of empty background), augmented with brightness, contrast, blur, noise, and JPEG artifacts. Labels are written in YOLO polygon format. Output is split 80/10/10 into `dataset/{train,valid,test}/` with a `data.yaml`. Progress logged every 100 images.
 
 ### 5. Train (`stages/train.py`)
 
-Trains `yolo11m` (or a local checkpoint) via Ultralytics:
-- Augmentation: mosaic, mixup, copy-paste, flip, rotation, perspective, scale
-- Ultralytics logger is redirected to the stages log file so all output appears in the UI
-- An `on_fit_epoch_end` callback logs per-epoch metrics: box loss, cls loss, mAP50
-- Output: `training/yolo/weights/best.pt`
+Trains `yolo11m` via Ultralytics on the generated dataset. Ultralytics log output is redirected to the stages log file so it appears live in the UI. An `on_fit_epoch_end` callback logs box loss, cls loss, and mAP50 per epoch. Output: `training/yolo/weights/best.pt`.
 
 ---
 

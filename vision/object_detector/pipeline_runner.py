@@ -1,3 +1,4 @@
+"""Launches pipeline stages as background threads and manages their log files."""
 import logging
 import sys
 import threading

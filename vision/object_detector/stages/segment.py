@@ -74,13 +74,15 @@ def _detect_boxes(model, image_tensor, caption: str, box_thr: float, text_thr: f
     keep = logits.max(dim=1)[0] > box_thr
     logits, boxes = logits[keep].cpu(), boxes[keep].cpu()
 
+    scores = logits.max(dim=1)[0]
+
     tokenizer = model.tokenizer
     tokenized = tokenizer(caption)
     phrases = [
         get_phrases_from_posmap(l > text_thr, tokenized, tokenizer)
         for l in logits
     ]
-    return boxes, phrases
+    return boxes, phrases, scores
 
 
 # ── Box / mask helpers ───────────────────────────────────────────────────────
@@ -127,49 +129,48 @@ def _segment_image(
     W, H = image_pil.size
     img_cv = cv2.cvtColor(np.array(image_pil), cv2.COLOR_RGB2BGR)
 
-    boxes, phrases = _detect_boxes(
+    boxes, phrases, det_scores = _detect_boxes(
         grounding_model, _image_to_tensor(image_pil), class_name, box_thr, text_thr, device
     )
     if len(boxes) == 0:
         logger.warning("  No detections: %s", img_path.name)
         return 0
 
+    # Keep only the highest-confidence detection (one object per image)
+    best_idx = int(det_scores.argmax().item())
+    box = boxes[best_idx]
+
     with torch.autocast(device_type=device, dtype=torch.bfloat16):
         sam3_state = sam3_processor.set_image(image_pil.copy())
         sam3_state = sam3_processor.set_text_prompt(prompt=class_name, state=sam3_state)
 
-    saved = 0
-    for i, (box, _) in enumerate(zip(boxes, phrases)):
-        x0, y0, x1, y1 = _box_to_xyxy(box, W, H)
-        norm_box = _xyxy_to_cxcywh_norm(x0, y0, x1, y1, W, H)
+    x0, y0, x1, y1 = _box_to_xyxy(box, W, H)
+    norm_box = _xyxy_to_cxcywh_norm(x0, y0, x1, y1, W, H)
 
-        with torch.autocast(device_type=device, dtype=torch.bfloat16):
-            sam3_state["geometric_prompt"] = sam3_processor.model._get_dummy_prompt()
-            sam3_state = sam3_processor.add_geometric_prompt(box=norm_box, label=True, state=sam3_state)
+    with torch.autocast(device_type=device, dtype=torch.bfloat16):
+        sam3_state["geometric_prompt"] = sam3_processor.model._get_dummy_prompt()
+        sam3_state = sam3_processor.add_geometric_prompt(box=norm_box, label=True, state=sam3_state)
 
-        masks = sam3_state.get("masks")
-        scores = sam3_state.get("scores")
-        if masks is None or masks.nelement() == 0:
-            continue
+    masks = sam3_state.get("masks")
+    sam_scores = sam3_state.get("scores")
+    if masks is None or masks.nelement() == 0:
+        return 0
 
-        best = int(torch.argmax(scores).item())
-        raw_mask = masks[best, 0].detach().cpu().numpy().astype(np.uint8)
-        clean_mask = _apply_morphology(raw_mask)
+    best_mask = int(torch.argmax(sam_scores).item())
+    raw_mask = masks[best_mask, 0].detach().cpu().numpy().astype(np.uint8)
+    clean_mask = _apply_morphology(raw_mask)
 
-        bgra = cv2.cvtColor(img_cv.copy(), cv2.COLOR_BGR2BGRA)
-        bgra[:, :, 3] = clean_mask
+    bgra = cv2.cvtColor(img_cv.copy(), cv2.COLOR_BGR2BGRA)
+    bgra[:, :, 3] = clean_mask
 
-        # crop to tight bbox inline — no intermediate segmented/ directory
-        rgba_pil = Image.fromarray(cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGBA), "RGBA")
-        bbox = Image.composite(rgba_pil, Image.new("RGBA", rgba_pil.size), rgba_pil).getbbox()
-        if not bbox:
-            continue
+    rgba_pil = Image.fromarray(cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGBA), "RGBA")
+    bbox = Image.composite(rgba_pil, Image.new("RGBA", rgba_pil.size), rgba_pil).getbbox()
+    if not bbox:
+        return 0
 
-        out_path = cropped_dir / f"{img_path.stem}_{i}.png"
-        rgba_pil.crop(bbox).save(str(out_path))
-        saved += 1
-
-    return saved
+    out_path = cropped_dir / f"{img_path.stem}.png"
+    rgba_pil.crop(bbox).save(str(out_path))
+    return 1
 
 
 # ── Public entry point ────────────────────────────────────────────────────────

@@ -38,7 +38,7 @@ BLOB_COUNT_MIN    = 0
 BLOB_COUNT_MAX    = 2
 BLOB_SIZE         = (15, 150)
 BLOB_PROBABILITY  = 0.15
-QUALITY_FACTOR    = 0.25
+QUALITY_FACTOR    = 0.75
 
 
 # ── Augmentation functions ────────────────────────────────────────────────────
@@ -219,7 +219,7 @@ def run(
             if not files:
                 continue
             fg = Image.open(random.choice(files)).convert("RGBA")
-            fg = fg.rotate(random.randint(-5, 5), resample=Image.BICUBIC, expand=True)
+            fg = fg.rotate(random.randint(-180, 180), resample=Image.BICUBIC, expand=True)
             fg = _scale_fg(fg, bg_img)
             fg = ImageEnhance.Brightness(fg).enhance(random.uniform(0.8, 1.2))
             fg = ImageEnhance.Contrast(fg).enhance(random.uniform(0.8, 1.2))

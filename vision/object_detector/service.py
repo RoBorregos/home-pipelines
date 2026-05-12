@@ -1,3 +1,4 @@
+"""FastAPI service — HTTP endpoints, log streaming, inference, file serving."""
 import asyncio
 import io
 import logging
@@ -114,7 +115,9 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     } if cropped.exists() else {}
     s.segment_done  = bool(s.segmented_classes)
     s.generate_done = (run_dir / "dataset" / "data.yaml").exists()
-    s.train_done    = (run_dir / "training").exists()
+    best_pt         = run_dir / "training" / "yolo" / "weights" / "best.pt"
+    s.train_done    = best_pt.exists()
+    s.best_weights  = str(best_pt) if best_pt.exists() else ""
     s.review_done   = s.segment_done  # assume reviewed if segmented (user can override)
     data_yaml = run_dir / "dataset" / "data.yaml"
     s.data_yaml = str(data_yaml) if data_yaml.exists() else ""

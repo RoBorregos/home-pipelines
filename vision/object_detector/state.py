@@ -1,3 +1,4 @@
+"""PipelineState dataclass — atomic JSON persistence and run directory helpers."""
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
