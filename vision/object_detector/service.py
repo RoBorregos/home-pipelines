@@ -18,7 +18,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image
 from pydantic import BaseModel
 
-import pipeline_runner
+from pipeline_runner import PipelineRunner
 import state as ps
 from state import SEGMENT, GENERATE, TRAIN, BASE_DIR, RUNS_DIR
 
@@ -27,6 +27,7 @@ logging.basicConfig(level=logging.INFO)
 API_KEY = os.environ.get("PIPELINE_API_KEY", "TESTING*/*1234567890")
 
 app = FastAPI(title="Object Detector Pipeline")
+runner = PipelineRunner()
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "review_app" / "templates"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "review_app" / "static")), name="static")
@@ -177,7 +178,7 @@ def logs_file():
 def stage_segment(x_api_key: str = Header(None)):
     _auth(x_api_key)
     try:
-        pipeline_runner.start_segment()
+        runner.start_segment()
         return {"running": SEGMENT}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
@@ -194,7 +195,7 @@ def stage_generate(body: GenerateBody, x_api_key: str = Header(None)):
     if not s.review_done:
         raise HTTPException(status_code=409, detail="Review must be done first")
     try:
-        pipeline_runner.start_generate(body.images_to_generate)
+        runner.start_generate(body.images_to_generate)
         return {"running": GENERATE}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
@@ -213,7 +214,7 @@ def stage_train(body: TrainBody, x_api_key: str = Header(None)):
     if not s.generate_done:
         raise HTTPException(status_code=409, detail="Generate stage must be done first")
     try:
-        pipeline_runner.start_train(body.device, body.epochs, body.batch)
+        runner.start_train(body.device, body.epochs, body.batch)
         return {"running": TRAIN}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
