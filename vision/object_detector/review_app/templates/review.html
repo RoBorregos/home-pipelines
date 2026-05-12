@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review segmented images</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 0.92rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: calc(100% - 80px);
+    }
+    header .meta { font-size: 0.78rem; color: #888; white-space: nowrap; }
+
+    .class-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 20px;
+      background: #141414;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .class-btn {
+      padding: 5px 14px;
+      border: 1px solid #333;
+      border-radius: 99px;
+      background: #1e1e1e;
+      color: #aaa;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .class-btn:hover { border-color: #555; color: #ddd; }
+    .class-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 20px;
+      background: #141414;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    button {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button:not(:disabled):hover { opacity: 0.82; }
+
+    .btn-danger  { background: #c0392b; color: #fff; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-ghost   { background: #2a2a2a; color: #ccc; }
+
+    #selection-count { font-size: 0.8rem; color: #aaa; }
+    .spacer { flex: 1; }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px;
+      padding: 16px 20px;
+    }
+
+    .card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #1e1e1e;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      aspect-ratio: 1;
+    }
+    .card.selected { border-color: #c0392b; }
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: repeating-conic-gradient(#2a2a2a 0% 25%, #1a1a1a 0% 50%) 0 0 / 16px 16px;
+    }
+    .card .check {
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #c0392b;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .card.selected .check { display: flex; }
+    .card .check::after { content: "✕"; font-size: 12px; color: #fff; }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px;
+      color: #888;
+      font-size: 0.875rem;
+    }
+
+    #status-bar {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 0.82rem;
+      display: none;
+      max-width: calc(100vw - 40px);
+      text-align: center;
+    }
+    #status-bar.visible { display: block; }
+    #status-bar.success { border-color: #27ae60; color: #2ecc71; }
+    #status-bar.error   { border-color: #c0392b; color: #e74c3c; }
+
+    .empty { text-align: center; padding: 60px 24px; color: #555; font-size: 0.9rem; }
+
+    /* ── Mobile ── */
+    @media (max-width: 500px) {
+      #grid { grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 12px 14px; }
+      .toolbar { padding: 10px 14px; }
+      .class-bar { padding: 10px 14px; }
+      header { padding: 10px 14px; }
+      #btn-approve, #btn-accept-class, #btn-reject-class { flex: 1; }
+      .spacer { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Review — <strong id="hdr-class">select a class</strong></h1>
+  <span class="meta" id="header-meta"></span>
+  <button onclick="resetApiKey()"
+    style="background:#2a2a2a;color:#ccc;border:none;border-radius:6px;
+           padding:5px 12px;font-size:0.76rem;cursor:pointer;white-space:nowrap;flex-shrink:0">
+    API key
+  </button>
+</header>
+
+<div class="class-bar" id="class-bar">
+  <span style="color:#555;font-size:0.8rem;align-self:center">Loading classes…</span>
+</div>
+
+<div class="toolbar">
+  <button class="btn-ghost" id="btn-select-all" disabled>Select all</button>
+  <button class="btn-ghost" id="btn-clear" disabled>Clear</button>
+  <button class="btn-danger" id="btn-delete" disabled>Delete selected</button>
+  <span id="selection-count"></span>
+  <div class="spacer"></div>
+  <button class="btn-ghost" id="btn-accept-class" disabled>Accept class →</button>
+  <button class="btn-danger" id="btn-reject-class" disabled>Reject class</button>
+  <button class="btn-success" id="btn-approve" disabled>✓ Mark reviewed</button>
+</div>
+
+<div id="grid"><p class="empty">Select a class to start reviewing.</p></div>
+<div class="pagination" id="pagination"></div>
+<div id="status-bar"></div>
+
+<script src="/static/auth.js"></script>
+<script src="/static/review.js"></script>
+</body>
+</html>
