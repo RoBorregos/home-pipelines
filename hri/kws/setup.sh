@@ -25,7 +25,7 @@ PIPER_DIR="$THIRD_PARTY_DIR/piper-sample-generator"
 
 # ---- 1. Pick a supported Python interpreter --------------------------------
 PYTHON_BIN=""
-for candidate in python3.11 python3.10; do
+for candidate in python3.12 python3.11 python3.10; do
   if command -v "$candidate" >/dev/null 2>&1; then
     PYTHON_BIN="$candidate"
     break
@@ -33,9 +33,8 @@ for candidate in python3.11 python3.10; do
 done
 
 if [[ -z "$PYTHON_BIN" ]]; then
-  echo "ERROR: need python3.10 or python3.11 on PATH (found neither)." >&2
-  echo "       The repo-level venv at /Desktop/home2/venv runs Python 3.13," >&2
-  echo "       which is too new for several training dependencies." >&2
+  echo "ERROR: need python3.10, 3.11, or 3.12 on PATH (found none)." >&2
+  echo "       Python 3.13 is too new for several training dependencies." >&2
   echo "       Install one of the supported versions and re-run setup.sh." >&2
   exit 1
 fi
@@ -45,18 +44,44 @@ echo "[setup] using interpreter: $($PYTHON_BIN --version) ($(command -v "$PYTHON
 if [[ ! -d "$VENV_DIR" ]]; then
   echo "[setup] creating venv at $VENV_DIR"
   "$PYTHON_BIN" -m venv "$VENV_DIR"
+else
+  # Guard: if the existing venv's activate script points to a different
+  # directory (e.g. it was copied from another project), recreate it so
+  # installs land in the right place.
+  # Use || true so grep's exit-1-on-no-match doesn't kill the script under set -e.
+  VENV_IN_ACTIVATE=$(grep 'VIRTUAL_ENV=' "$VENV_DIR/bin/activate" 2>/dev/null \
+    | grep -v 'cygpath\|unset' | head -1 | sed 's/.*VIRTUAL_ENV=//; s/^"//; s/"$//' || true)
+  if [[ "$VENV_IN_ACTIVATE" != "$VENV_DIR" ]]; then
+    echo "[setup] existing venv activate script points to '$VENV_IN_ACTIVATE' instead of '$VENV_DIR' — recreating venv"
+    rm -rf "$VENV_DIR"
+    "$PYTHON_BIN" -m venv "$VENV_DIR"
+  fi
 fi
 
 # shellcheck disable=SC1090
 source "$VENV_DIR/bin/activate"
+
+# Sanity-check: python must now resolve inside the venv.
+ACTIVE_PYTHON="$(command -v python)"
+if [[ "$ACTIVE_PYTHON" != "$VENV_DIR/bin/python"* ]]; then
+  echo "ERROR: venv activation failed — 'python' is '$ACTIVE_PYTHON', expected inside $VENV_DIR" >&2
+  exit 1
+fi
+
 python -m pip install --upgrade pip wheel setuptools
 
 # ---- 3. Install Python deps -------------------------------------------------
-# Use CUDA wheels when an NVIDIA GPU is visible, CPU wheels otherwise.
+# Torch wheel strategy:
+#   NVIDIA GPU present → CUDA build from download.pytorch.org
+#   macOS             → PyPI wheel is already CPU-only; no CDN needed
+#   Linux / no GPU    → CPU-only build from download.pytorch.org
 if command -v nvidia-smi >/dev/null 2>&1; then
   echo "[setup] NVIDIA GPU detected, installing CUDA torch wheels"
   pip install --extra-index-url https://download.pytorch.org/whl/cu121 \
     torch==2.2.* torchaudio==2.2.*
+elif [[ "$(uname)" == "Darwin" ]]; then
+  echo "[setup] macOS detected, installing torch wheels from PyPI (already CPU-only)"
+  pip install torch==2.2.* torchaudio==2.2.*
 else
   echo "[setup] no NVIDIA GPU, installing CPU torch wheels"
   pip install --extra-index-url https://download.pytorch.org/whl/cpu \
@@ -64,6 +89,27 @@ else
 fi
 
 pip install -r "$HERE/requirements.txt"
+
+# ---- piper-phonemize compatibility shim ------------------------------------
+# piper-phonemize has no macOS Python wheel on PyPI.  piper-tts ships the same
+# espeak-ng binding (espeakbridge.so) with a compatible Python API, so we drop
+# a one-file shim into the venv's site-packages that satisfies the
+#   from piper_phonemize import phonemize_espeak
+# import used by piper-sample-generator/generate_samples.py.
+SITE_PACKAGES="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+cat > "$SITE_PACKAGES/piper_phonemize.py" << 'SHIM_EOF'
+"""piper-phonemize shim: delegates to piper-tts's bundled espeakbridge."""
+from piper.phonemize_espeak import EspeakPhonemizer as _Pep
+
+_phonemizer = None
+
+def phonemize_espeak(text, voice):
+    global _phonemizer
+    if _phonemizer is None:
+        _phonemizer = _Pep()
+    return _phonemizer.phonemize(voice, text)
+SHIM_EOF
+echo "[setup] installed piper_phonemize compatibility shim at $SITE_PACKAGES/piper_phonemize.py"
 
 # onnxruntime flavor depends on whether we have CUDA. onnxruntime and
 # onnxruntime-gpu conflict if both are installed, so we handle them here
@@ -103,8 +149,21 @@ else
 fi
 
 # Install piper-sample-generator's own requirements if it ships a file.
+# Strip piper-phonemize: it has no macOS wheel on PyPI; our shim (written
+# earlier) provides the same API via piper-tts's bundled espeakbridge.
 if [[ -f "$PIPER_DIR/requirements.txt" ]]; then
-  pip install -r "$PIPER_DIR/requirements.txt"
+  TMP_PIPER_REQ=$(mktemp)
+  grep -v '^piper-phonemize' "$PIPER_DIR/requirements.txt" > "$TMP_PIPER_REQ"
+  # webrtcvad has no ARM64 macOS wheel on PyPI — build from source using the
+  # Xcode clang so the correct SDK is found (Homebrew LLVM picks the wrong one).
+  if [[ "$(uname)" == "Darwin" ]]; then
+    CC=$(xcrun --find clang) CXX=$(xcrun --find clang++) \
+      SDKROOT=$(xcrun --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=11.0 \
+      pip install -r "$TMP_PIPER_REQ" --no-binary webrtcvad
+  else
+    pip install -r "$TMP_PIPER_REQ"
+  fi
+  rm -f "$TMP_PIPER_REQ"
 fi
 
 # v2.0.0 needs a pretrained model file at models/en_US-libritts_r-medium.pt

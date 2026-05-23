@@ -18,7 +18,8 @@ onnx
 # setup.sh on every rerun.
 
 # Piper sample generator runtime deps
-piper-phonemize
+# piper-phonemize: no macOS wheel on PyPI; setup.sh writes a shim that delegates
+# to piper-tts's bundled espeakbridge — see the "piper-phonemize shim" step there.
 piper-tts
 mutagen
 # DeepPhonemizer — imported as `dp` by piper-sample-generator v2.0.0

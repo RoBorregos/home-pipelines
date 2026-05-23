@@ -879,9 +879,9 @@ if __name__ == "__main__":
                 text=config["target_phrase"],
                 max_samples=config["n_samples"] - n_current_samples,
                 batch_size=config["tts_batch_size"],
-                noise_scales=[0.98],
-                noise_scale_ws=[0.98],
-                length_scales=[1.0, 1.25, 1.5],
+                noise_scales=[0.667],
+                noise_scale_ws=[0.8],
+                length_scales=[0.9, 1.0, 1.1],
                 output_dir=positive_train_output_dir,
                 auto_reduce_batch_size=True,
                 file_names=[
@@ -904,9 +904,9 @@ if __name__ == "__main__":
                 text=config["target_phrase"],
                 max_samples=config["n_samples_val"] - n_current_samples,
                 batch_size=config["tts_batch_size"],
-                noise_scales=[1.0],
-                noise_scale_ws=[1.0],
-                length_scales=[1.0, 1.25, 1.5],
+                noise_scales=[0.667],
+                noise_scale_ws=[0.8],
+                length_scales=[0.9, 1.0, 1.1],
                 output_dir=positive_test_output_dir,
                 auto_reduce_batch_size=True,
             )
@@ -936,9 +936,9 @@ if __name__ == "__main__":
                 text=adversarial_texts,
                 max_samples=config["n_samples"] - n_current_samples,
                 batch_size=config["tts_batch_size"] // 7,
-                noise_scales=[0.98],
-                noise_scale_ws=[0.98],
-                length_scales=[1.0, 1.25, 1.5],
+                noise_scales=[0.667],
+                noise_scale_ws=[0.8],
+                length_scales=[0.9, 1.0, 1.1],
                 output_dir=negative_train_output_dir,
                 auto_reduce_batch_size=True,
                 file_names=[
@@ -971,9 +971,9 @@ if __name__ == "__main__":
                 text=adversarial_texts,
                 max_samples=config["n_samples_val"] - n_current_samples,
                 batch_size=config["tts_batch_size"] // 7,
-                noise_scales=[1.0],
-                noise_scale_ws=[1.0],
-                length_scales=[1.0, 1.25, 1.5],
+                noise_scales=[0.667],
+                noise_scale_ws=[0.8],
+                length_scales=[0.9, 1.0, 1.1],
                 output_dir=negative_test_output_dir,
                 auto_reduce_batch_size=True,
             )
@@ -1176,16 +1176,13 @@ if __name__ == "__main__":
             def __iter__(self):
                 return self.generator
 
-        n_cpus = os.cpu_count()
-        if n_cpus is None:
-            n_cpus = 1
-        else:
-            n_cpus = n_cpus // 2
+        # num_workers=0: IterableDataset + lambdas can't be pickled for
+        # multiprocessing on macOS (spawn start method). Single-threaded
+        # loading is fast enough for this dataset size.
         X_train = torch.utils.data.DataLoader(
             IterDataset(batch_generator),
             batch_size=None,
-            num_workers=n_cpus,
-            prefetch_factor=16,
+            num_workers=0,
         )
 
         X_val_fp = np.load(config["false_positive_validation_data_path"])
