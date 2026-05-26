@@ -16,7 +16,6 @@
   const btnClear     = document.getElementById("btn-clear");
   const btnAccept    = document.getElementById("btn-accept-class");
   const btnReject    = document.getElementById("btn-reject-class");
-  const btnPublish   = document.getElementById("btn-publish-repo");
   const statusBar    = document.getElementById("status-bar");
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -81,7 +80,6 @@
     btnApprove.disabled = false;
     btnAccept.disabled = !hasNext;
     btnReject.disabled = false;
-    btnPublish.disabled = false;
 
     loadPage(0);
   }
@@ -191,7 +189,26 @@
   });
 
   btnApprove.addEventListener("click", async () => {
-    if (!confirm("Mark all classes as reviewed? This enables the Generate stage.")) return;
+    if (!confirm("Mark all classes as reviewed? This will publish all classes to the repo and enable the Generate stage.")) return;
+    btnApprove.disabled = true;
+
+    for (const cls of classList) {
+      showStatus(`Publishing "${cls}" to repo…`);
+      const pubRes = await fetch("/repo/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+        body: JSON.stringify({ label: cls }),
+      });
+      if (!pubRes.ok) {
+        const err = await pubRes.json().catch(() => ({}));
+        if (pubRes.status !== 409) {
+          showStatus(`Error publishing "${cls}": ${err.detail || pubRes.statusText}`, "error");
+          btnApprove.disabled = false;
+          return;
+        }
+      }
+    }
+
     const res = await fetch("/review/approve", {
       method: "POST",
       headers: { "x-api-key": getApiKey() },
@@ -199,34 +216,10 @@
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       showStatus(`Error: ${err.detail || res.statusText}`, "error");
+      btnApprove.disabled = false;
       return;
     }
-    showStatus("Marked as reviewed. You can now run Generate from the dashboard.", "success");
-    btnApprove.disabled = true;
-  });
-
-  // Publish current class to the global repository
-  btnPublish.addEventListener("click", async () => {
-    const identifier = document.getElementById("repo-identifier").value.trim();
-    if (!identifier) { showStatus("Enter an identifier before publishing", "error"); return; }
-    if (!currentClass) return;
-    btnPublish.disabled = true;
-    showStatus(`Publishing "${currentClass}" as "${identifier}"…`);
-    const res = await fetch("/repo/publish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
-      body: JSON.stringify({ label: currentClass, identifier }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      showStatus(`Error: ${err.detail || res.statusText}`, "error");
-      btnPublish.disabled = false;
-      return;
-    }
-    const data = await res.json();
-    showStatus(`Published "${currentClass} / ${identifier}" — ${data.image_count} images saved to repo`, "success");
-    document.getElementById("repo-identifier").value = "";
-    btnPublish.disabled = false;
+    showStatus("Published all classes and marked as reviewed. You can now run Generate from the dashboard.", "success");
   });
 
   // ── Init ─────────────────────────────────────────────────────────────────────

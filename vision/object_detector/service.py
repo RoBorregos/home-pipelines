@@ -165,7 +165,6 @@ def repo_label(label: str):
 
 class PublishBody(BaseModel):
     label: str
-    identifier: str
     notes: str = ""
 
 
@@ -175,15 +174,16 @@ def repo_publish(body: PublishBody, x_api_key: str = Header(None)):
     s = ps.load()
     if not s.run_name:
         raise HTTPException(status_code=400, detail="No active run")
+    identifier = f"{body.label}_{s.run_name}"
     source_dir = RUNS_DIR / s.run_name / "cropped" / body.label
     if not source_dir.exists():
         raise HTTPException(status_code=400, detail=f"Class '{body.label}' not found in active run's cropped directory")
     try:
-        count = RepoManager().publish(body.label, body.identifier, source_dir,
+        count = RepoManager().publish(body.label, identifier, source_dir,
                                       source_run=s.run_name, notes=body.notes)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
-    return {"label": body.label, "identifier": body.identifier, "image_count": count}
+    return {"label": body.label, "identifier": identifier, "image_count": count}
 
 
 class RepoImportBody(BaseModel):

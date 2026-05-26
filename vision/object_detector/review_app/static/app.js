@@ -304,16 +304,23 @@
   async function loadRepo() {
     try {
       const data = await fetch("/repo").then(r => r.json());
+      const entries = data.entries || {};
+      const labels = Object.keys(entries).sort();
+
       const sel = document.getElementById("repo-label-sel");
       const current = sel.value;
       sel.innerHTML = '<option value="">— label —</option>';
-      Object.keys(data.entries || {}).sort().forEach(label => {
+      labels.forEach(label => {
         const opt = document.createElement("option");
         opt.value = label;
-        opt.textContent = label;
+        const idCount = Object.keys(entries[label].identifiers || {}).length;
+        opt.textContent = `${label}  (${idCount} id${idCount !== 1 ? "s" : ""})`;
         if (label === current) opt.selected = true;
         sel.appendChild(opt);
       });
+
+      const hint = document.getElementById("repo-empty-hint");
+      if (hint) hint.style.display = labels.length ? "none" : "";
     } catch (_) {}
   }
 
