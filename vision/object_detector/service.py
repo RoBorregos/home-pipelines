@@ -16,7 +16,7 @@ from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from PIL import Image
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from pipeline_runner import PipelineRunner
@@ -572,7 +572,7 @@ async def infer(
         _infer_model_path = s.best_weights
 
     img_bytes = await file.read()
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(img_bytes))).convert("RGB")
 
     results = _infer_model.predict(img, conf=conf, verbose=False)
     annotated = results[0].plot()  # BGR numpy array
