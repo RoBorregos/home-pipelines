@@ -3,8 +3,6 @@ import json
 import logging
 import os
 import shutil
-import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -171,42 +169,3 @@ class RepoManager:
             shutil.rmtree(entry_dir)
         return deleted
 
-    def import_from_gdrive(
-        self,
-        drive_url: str,
-        label: str,
-        identifier: str,
-        log: logging.Logger,
-        notes: str = "",
-    ) -> int:
-        """Download a Drive folder of PNGs and publish them to the repo."""
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            log.info("Downloading Drive folder for repo import: %s", drive_url)
-            result = subprocess.run(
-                ["gdown", "--folder", drive_url, "-O", str(tmp_path), "--quiet"],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                log.error("gdown failed:\n%s", result.stderr)
-                raise RuntimeError(f"gdown failed: {result.stderr[:300]}")
-
-            roots = [d for d in tmp_path.iterdir() if d.is_dir()]
-            download_root = roots[0] if len(roots) == 1 else tmp_path
-
-            # Collect PNGs recursively (user may have a single flat folder)
-            all_pngs = sorted(download_root.rglob("*.png"))
-            if not all_pngs:
-                raise RuntimeError("No PNG files found in downloaded Drive folder")
-
-            log.info("Found %d PNG(s) — publishing to repo as %s / %s", len(all_pngs), label, identifier)
-
-            # Copy all pngs to a temp flat dir for publish()
-            flat_dir = tmp_path / "_flat"
-            flat_dir.mkdir()
-            for p in all_pngs:
-                shutil.copy2(p, flat_dir / p.name)
-
-            count = self.publish(label, identifier, flat_dir, source_run=None, notes=notes or "imported from Drive")
-            log.info("Repo import done: %d images → %s / %s", count, label, identifier)
-            return count

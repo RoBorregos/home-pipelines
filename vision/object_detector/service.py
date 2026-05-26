@@ -224,44 +224,6 @@ def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
     return {"imported": imported}
 
 
-class RepoDriveImportBody(BaseModel):
-    drive_url: str
-    label: str
-    identifier: str
-    notes: str = ""
-
-
-@app.post("/repo/import/gdrive")
-def repo_import_gdrive(body: RepoDriveImportBody, x_api_key: str = Header(None)):
-    _auth(x_api_key)
-    log_dir = BASE_DIR / "logs"
-    log_dir.mkdir(exist_ok=True)
-    log_file = log_dir / f"repo_import_{body.label}_{body.identifier}.log"
-
-    snap = ps.load()
-    snap.log_file = str(log_file)
-    ps.save(snap)
-
-    def _pull():
-        log = logging.getLogger("repo_import")
-        log.handlers.clear()
-        fh = logging.FileHandler(log_file, mode="w", encoding="utf-8")
-        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
-        sh = logging.StreamHandler()
-        sh.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
-        log.addHandler(fh)
-        log.addHandler(sh)
-        log.setLevel(logging.INFO)
-        try:
-            RepoManager().import_from_gdrive(body.drive_url, body.label, body.identifier,
-                                             log, notes=body.notes)
-        except Exception as exc:
-            log.error("Repo Drive import failed: %s", exc)
-
-    import threading
-    threading.Thread(target=_pull, daemon=True).start()
-    return {"status": "downloading", "label": body.label, "identifier": body.identifier}
-
 
 @app.delete("/repo/{label}/{identifier}")
 def repo_delete(label: str, identifier: str, x_api_key: str = Header(None)):

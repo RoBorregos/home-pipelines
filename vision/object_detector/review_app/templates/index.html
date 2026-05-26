@@ -239,24 +239,11 @@
         <span class="stage-title">Object Repository</span>
         <button class="btn-ghost btn-sm" onclick="toggleRepoPanel()" id="btn-repo-toggle">▼ Show</button>
       </div>
-      <p class="stage-desc">Import existing curated crops into this run, or save crops from a Drive folder.</p>
+      <p class="stage-desc">Import curated crops from the repo into this run (skips re-segmentation).</p>
       <div id="repo-panel" style="display:none">
 
-        <!-- Step 1: Add to repo (Drive import) -->
-        <p class="stage-desc" style="margin-bottom:6px"><strong style="color:var(--text)">Step 1 — Add objects to the repo</strong> from a Drive folder of PNGs, or publish from the <a href="/review" target="_blank" style="color:#93c5fd">Review UI</a> after segmenting.</p>
-        <div class="row" style="margin-bottom:6px">
-          <input id="repo-drive-url" type="text" placeholder="Drive folder URL (PNGs)" style="width:100%;max-width:250px" />
-          <input id="repo-drive-label" type="text" placeholder="Label" style="width:75px" />
-          <input id="repo-drive-id" type="text" placeholder="Identifier" style="width:95px" />
-        </div>
-        <div class="row" style="margin-bottom:12px">
-          <button class="btn-ghost" onclick="doRepoDriveImport()">⬇ Save to Repo</button>
-        </div>
-
-        <!-- Step 2: Import from existing repo entries -->
-        <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px 36px" />
-        <p class="stage-desc" style="margin-bottom:6px"><strong style="color:var(--text)">Step 2 — Import saved objects into this run</strong> (skips re-segmentation).</p>
-        <p class="stage-desc" id="repo-empty-hint" style="color:#d97706;margin-bottom:8px">Repository is empty — add objects using Step 1 above, or publish from the Review UI first.</p>
+        <!-- Import from existing repo entries -->
+        <p class="stage-desc" id="repo-empty-hint" style="color:#d97706;margin-bottom:8px">Repository is empty — publish classes from the Review UI first.</p>
         <div class="row" style="margin-bottom:8px">
           <select id="repo-label-sel" onchange="loadRepoIdentifiers()" style="width:130px;max-width:130px">
             <option value="">— label —</option>

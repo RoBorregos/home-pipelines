@@ -381,17 +381,6 @@
     }
   };
 
-  window.doRepoDriveImport = async () => {
-    const url   = document.getElementById("repo-drive-url").value.trim();
-    const label = document.getElementById("repo-drive-label").value.trim();
-    const id    = document.getElementById("repo-drive-id").value.trim();
-    if (!url || !label || !id) { toast("Fill in Drive URL, Label, and Identifier", "error"); return; }
-    try {
-      await api("POST", "/repo/import/gdrive", { drive_url: url, label, identifier: id });
-      toast(`Downloading to repo as ${label} / ${id}…`);
-      startSSE();
-    } catch (e) { toast(e.message, "error"); }
-  };
 
   // ── Init ──────────────────────────────────────────────────────────────────
   (async () => {
