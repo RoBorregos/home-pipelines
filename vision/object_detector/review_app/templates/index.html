@@ -100,8 +100,9 @@
       padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 500;
       background: var(--border); color: var(--muted);
     }
-    .chip.done  { background: #14532d55; color: #86efac; }
-    .chip.new   { background: #1d3461;   color: #93c5fd; }
+    .chip.done     { background: #14532d55; color: #86efac; }
+    .chip.new      { background: #1d3461;   color: #93c5fd; }
+    .chip.imported { background: #3b076455; color: #c4b5fd; }
 
     /* ── Log panel ── */
     .log-panel {
@@ -228,6 +229,45 @@
       <div class="row">
         <button class="btn-primary" id="btn-upload" onclick="doUpload()">⬇ Pull from Drive</button>
         <button class="btn-ghost" onclick="loadLog()">Logs</button>
+      </div>
+    </div>
+
+    <!-- 1b. Repository -->
+    <div class="stage-card" id="card-repo">
+      <div class="stage-header">
+        <div class="stage-num" id="num-repo" style="font-size:0.65rem">REP</div>
+        <span class="stage-title">Object Repository</span>
+        <button class="btn-ghost btn-sm" onclick="toggleRepoPanel()" id="btn-repo-toggle">▼ Show</button>
+      </div>
+      <p class="stage-desc">Import existing curated crops into this run, or save crops from a Drive folder.</p>
+      <div id="repo-panel" style="display:none">
+
+        <!-- Import from existing repo entries -->
+        <div class="row" style="margin-bottom:8px">
+          <select id="repo-label-sel" onchange="loadRepoIdentifiers()" style="width:130px;max-width:130px">
+            <option value="">— label —</option>
+          </select>
+          <select id="repo-id-sel" style="width:140px;max-width:140px">
+            <option value="">— identifier —</option>
+          </select>
+          <button class="btn-ghost btn-sm" onclick="addRepoSelection()">+ Add</button>
+        </div>
+        <div class="class-chips" id="repo-pending-chips" style="margin-bottom:8px"></div>
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn-primary" id="btn-repo-import" onclick="doRepoImport()" disabled>⬇ Import selected into run</button>
+        </div>
+
+        <!-- Drive-to-repo import -->
+        <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 12px 36px" />
+        <p class="stage-desc" style="margin-left:36px;margin-bottom:8px">Save a Drive folder of PNGs directly into the repository:</p>
+        <div class="row" style="margin-bottom:6px">
+          <input id="repo-drive-url" type="text" placeholder="Drive folder URL" style="width:100%;max-width:260px" />
+          <input id="repo-drive-label" type="text" placeholder="Label" style="width:80px" />
+          <input id="repo-drive-id" type="text" placeholder="Identifier" style="width:100px" />
+        </div>
+        <div class="row">
+          <button class="btn-ghost" onclick="doRepoDriveImport()">⬇ Save to Repo</button>
+        </div>
       </div>
     </div>
 

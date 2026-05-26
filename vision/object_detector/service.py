@@ -1,6 +1,7 @@
 """FastAPI service — HTTP endpoints, log streaming, inference, file serving."""
 import asyncio
 import io
+import json
 import logging
 import os
 import re
@@ -21,6 +22,7 @@ from pydantic import BaseModel
 from pipeline_runner import PipelineRunner
 import state as ps
 from state import SEGMENT, GENERATE, TRAIN, BASE_DIR, RUNS_DIR
+from repo import RepoManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -95,6 +97,7 @@ def create_run(body: CreateRunBody, x_api_key: str = Header(None)):
     s.segment_done = s.review_done = s.generate_done = s.train_done = False
     s.error = s.running = s.data_yaml = s.best_weights = ""
     s.segmented_classes = {}
+    s.imported_classes = {}
     ps.save(s)
     return {"run_name": name}
 
@@ -122,6 +125,9 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     s.review_done   = s.segment_done  # assume reviewed if segmented (user can override)
     data_yaml = run_dir / "dataset" / "data.yaml"
     s.data_yaml = str(data_yaml) if data_yaml.exists() else ""
+    # Restore imported_classes from per-run sidecar
+    sidecar = run_dir / "imported_classes.json"
+    s.imported_classes = json.loads(sidecar.read_text()) if sidecar.exists() else {}
     ps.save(s)
     return asdict(s)
 
@@ -133,6 +139,135 @@ def pipeline_reset(x_api_key: str = Header(None)):
     s.running = s.error = ""
     ps.save(s)
     return {"running": ""}
+
+
+# ── Global object repository ──────────────────────────────────────────────────
+
+@app.get("/repo")
+def repo_list():
+    return {"entries": RepoManager().list_entries()}
+
+
+@app.get("/repo/validate/{label}/{identifier}")
+def repo_validate(label: str, identifier: str):
+    return RepoManager().validate_entry(label, identifier)
+
+
+@app.get("/repo/{label}")
+def repo_label(label: str):
+    rm = RepoManager()
+    entries = rm.list_entries()
+    label_key = rm._find_label_key(entries, label)
+    if label_key is None:
+        raise HTTPException(status_code=404, detail=f"Label '{label}' not found")
+    return {"label": label_key, "identifiers": entries[label_key].get("identifiers", {})}
+
+
+class PublishBody(BaseModel):
+    label: str
+    identifier: str
+    notes: str = ""
+
+
+@app.post("/repo/publish")
+def repo_publish(body: PublishBody, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    s = ps.load()
+    if not s.run_name:
+        raise HTTPException(status_code=400, detail="No active run")
+    source_dir = RUNS_DIR / s.run_name / "cropped" / body.label
+    if not source_dir.exists():
+        raise HTTPException(status_code=400, detail=f"Class '{body.label}' not found in active run's cropped directory")
+    try:
+        count = RepoManager().publish(body.label, body.identifier, source_dir,
+                                      source_run=s.run_name, notes=body.notes)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"label": body.label, "identifier": body.identifier, "image_count": count}
+
+
+class RepoImportBody(BaseModel):
+    imports: list  # [{"label": "Soap", "identifier": "BlueBottle"}, ...]
+
+
+@app.post("/repo/import")
+def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    s = ps.load()
+    if not s.run_name:
+        raise HTTPException(status_code=400, detail="No active run")
+    run_cropped = RUNS_DIR / s.run_name / "cropped"
+    rm = RepoManager()
+    imported = []
+    for entry in body.imports:
+        label = entry.get("label", "").strip()
+        identifier = entry.get("identifier", "").strip()
+        if not label or not identifier:
+            raise HTTPException(status_code=400, detail="Each import entry needs 'label' and 'identifier'")
+        try:
+            count = rm.import_to_run(label, identifier, run_cropped)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        imported.append({"label": label, "identifier": identifier, "count": count})
+        s.segmented_classes[label] = True
+        s.imported_classes[label] = {"identifier": identifier, "from_repo": True}
+
+    if s.segmented_classes and not s.segment_done:
+        s.segment_done = True
+    ps.save(s)
+
+    sidecar = RUNS_DIR / s.run_name / "imported_classes.json"
+    tmp = sidecar.with_suffix(".tmp")
+    tmp.write_text(json.dumps(s.imported_classes, indent=2))
+    os.replace(tmp, sidecar)
+
+    return {"imported": imported}
+
+
+class RepoDriveImportBody(BaseModel):
+    drive_url: str
+    label: str
+    identifier: str
+    notes: str = ""
+
+
+@app.post("/repo/import/gdrive")
+def repo_import_gdrive(body: RepoDriveImportBody, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    log_dir = BASE_DIR / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / f"repo_import_{body.label}_{body.identifier}.log"
+
+    snap = ps.load()
+    snap.log_file = str(log_file)
+    ps.save(snap)
+
+    def _pull():
+        log = logging.getLogger("repo_import")
+        log.handlers.clear()
+        fh = logging.FileHandler(log_file, mode="w", encoding="utf-8")
+        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
+        sh = logging.StreamHandler()
+        sh.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
+        log.addHandler(fh)
+        log.addHandler(sh)
+        log.setLevel(logging.INFO)
+        try:
+            RepoManager().import_from_gdrive(body.drive_url, body.label, body.identifier,
+                                             log, notes=body.notes)
+        except Exception as exc:
+            log.error("Repo Drive import failed: %s", exc)
+
+    import threading
+    threading.Thread(target=_pull, daemon=True).start()
+    return {"status": "downloading", "label": body.label, "identifier": body.identifier}
+
+
+@app.delete("/repo/{label}/{identifier}")
+def repo_delete(label: str, identifier: str, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    deleted = RepoManager().delete_entry(label, identifier)
+    return {"deleted_images": deleted}
 
 
 # ── Log streaming ─────────────────────────────────────────────────────────────

@@ -159,10 +159,16 @@
     // Class chips (segmented status per class)
     const chips = document.getElementById("class-chips");
     chips.innerHTML = "";
+    const imported = s.imported_classes || {};
     Object.entries(s.segmented_classes || {}).forEach(([cls, done]) => {
       const c = document.createElement("span");
-      c.className = `chip ${done ? "done" : "new"}`;
-      c.textContent = done ? `✓ ${cls}` : cls;
+      if (imported[cls]) {
+        c.className = "chip imported";
+        c.textContent = `↓ ${cls} (${imported[cls].identifier})`;
+      } else {
+        c.className = `chip ${done ? "done" : "new"}`;
+        c.textContent = done ? `✓ ${cls}` : cls;
+      }
       chips.appendChild(c);
     });
     // Same chips on review card
@@ -280,6 +286,104 @@
     if (!confirm("Reset running state? Files are not deleted.")) return;
     try { await api("POST", "/pipeline/reset", {}); toast("Reset"); await poll(); }
     catch (e) { toast(e.message, "error"); }
+  };
+
+  // ── Repository ────────────────────────────────────────────────────────────
+  let _repoPending = []; // [{label, identifier}]
+
+  window.toggleRepoPanel = () => {
+    const panel = document.getElementById("repo-panel");
+    const btn   = document.getElementById("btn-repo-toggle");
+    if (!panel) return;
+    const visible = panel.style.display !== "none";
+    panel.style.display = visible ? "none" : "";
+    btn.textContent = visible ? "▼ Show" : "▲ Hide";
+    if (!visible) loadRepo();
+  };
+
+  async function loadRepo() {
+    try {
+      const data = await fetch("/repo").then(r => r.json());
+      const sel = document.getElementById("repo-label-sel");
+      const current = sel.value;
+      sel.innerHTML = '<option value="">— label —</option>';
+      Object.keys(data.entries || {}).sort().forEach(label => {
+        const opt = document.createElement("option");
+        opt.value = label;
+        opt.textContent = label;
+        if (label === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  window.loadRepoIdentifiers = async () => {
+    const label = document.getElementById("repo-label-sel").value;
+    const sel = document.getElementById("repo-id-sel");
+    sel.innerHTML = '<option value="">— identifier —</option>';
+    if (!label) return;
+    try {
+      const data = await fetch(`/repo/${encodeURIComponent(label)}`).then(r => r.json());
+      Object.keys(data.identifiers || {}).sort().forEach(id => {
+        const opt = document.createElement("option");
+        const info = data.identifiers[id];
+        opt.value = id;
+        opt.textContent = `${id}  (${info.image_count} imgs)`;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  };
+
+  window.addRepoSelection = () => {
+    const label = document.getElementById("repo-label-sel").value;
+    const id    = document.getElementById("repo-id-sel").value;
+    if (!label || !id) { toast("Select a label and identifier", "error"); return; }
+    if (_repoPending.some(e => e.label === label && e.identifier === id)) return;
+    _repoPending.push({ label, identifier: id });
+    renderRepoPending();
+    document.getElementById("btn-repo-import").disabled = false;
+  };
+
+  function renderRepoPending() {
+    const container = document.getElementById("repo-pending-chips");
+    container.innerHTML = "";
+    _repoPending.forEach((entry, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chip imported";
+      chip.style.cursor = "pointer";
+      chip.title = "Click to remove";
+      chip.textContent = `${entry.label} / ${entry.identifier} ✕`;
+      chip.onclick = () => { _repoPending.splice(i, 1); renderRepoPending(); if (!_repoPending.length) document.getElementById("btn-repo-import").disabled = true; };
+      container.appendChild(chip);
+    });
+  }
+
+  window.doRepoImport = async () => {
+    if (!_repoPending.length) return;
+    try {
+      document.getElementById("btn-repo-import").disabled = true;
+      const result = await api("POST", "/repo/import", { imports: _repoPending });
+      const names = result.imported.map(e => `${e.label}/${e.identifier} (${e.count})`).join(", ");
+      toast(`Imported: ${names}`, "success");
+      _repoPending = [];
+      renderRepoPending();
+      await poll();
+    } catch (e) {
+      toast(e.message, "error");
+      document.getElementById("btn-repo-import").disabled = false;
+    }
+  };
+
+  window.doRepoDriveImport = async () => {
+    const url   = document.getElementById("repo-drive-url").value.trim();
+    const label = document.getElementById("repo-drive-label").value.trim();
+    const id    = document.getElementById("repo-drive-id").value.trim();
+    if (!url || !label || !id) { toast("Fill in Drive URL, Label, and Identifier", "error"); return; }
+    try {
+      await api("POST", "/repo/import/gdrive", { drive_url: url, label, identifier: id });
+      toast(`Downloading to repo as ${label} / ${id}…`);
+      startSSE();
+    } catch (e) { toast(e.message, "error"); }
   };
 
   // ── Init ──────────────────────────────────────────────────────────────────

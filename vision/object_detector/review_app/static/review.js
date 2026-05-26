@@ -16,6 +16,7 @@
   const btnClear     = document.getElementById("btn-clear");
   const btnAccept    = document.getElementById("btn-accept-class");
   const btnReject    = document.getElementById("btn-reject-class");
+  const btnPublish   = document.getElementById("btn-publish-repo");
   const statusBar    = document.getElementById("status-bar");
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -80,6 +81,7 @@
     btnApprove.disabled = false;
     btnAccept.disabled = !hasNext;
     btnReject.disabled = false;
+    btnPublish.disabled = false;
 
     loadPage(0);
   }
@@ -201,6 +203,30 @@
     }
     showStatus("Marked as reviewed. You can now run Generate from the dashboard.", "success");
     btnApprove.disabled = true;
+  });
+
+  // Publish current class to the global repository
+  btnPublish.addEventListener("click", async () => {
+    const identifier = document.getElementById("repo-identifier").value.trim();
+    if (!identifier) { showStatus("Enter an identifier before publishing", "error"); return; }
+    if (!currentClass) return;
+    btnPublish.disabled = true;
+    showStatus(`Publishing "${currentClass}" as "${identifier}"…`);
+    const res = await fetch("/repo/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+      body: JSON.stringify({ label: currentClass, identifier }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showStatus(`Error: ${err.detail || res.statusText}`, "error");
+      btnPublish.disabled = false;
+      return;
+    }
+    const data = await res.json();
+    showStatus(`Published "${currentClass} / ${identifier}" — ${data.image_count} images saved to repo`, "success");
+    document.getElementById("repo-identifier").value = "";
+    btnPublish.disabled = false;
   });
 
   // ── Init ─────────────────────────────────────────────────────────────────────
