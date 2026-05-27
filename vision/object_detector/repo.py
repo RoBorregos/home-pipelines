@@ -94,23 +94,4 @@ class RepoManager:
         self._save_index(data)
         return len(sources)
 
-    def delete_entry(self, label: str, identifier: str) -> int:
-        """Remove an identifier from the repo. Returns deleted image count."""
-        data = self._load_index()
-        entries = data.get("entries", {})
-        label_key = self._find_label_key(entries, label)
-        if label_key is None:
-            return 0
-        id_data = entries[label_key].get("identifiers", {}).pop(identifier, None)
-        if id_data is None:
-            return 0
-        if not entries[label_key]["identifiers"]:
-            del entries[label_key]
-        self._save_index(data)
-        entry_dir = self.repo_dir / label_key / identifier
-        deleted = 0
-        if entry_dir.exists():
-            deleted = len(list(entry_dir.glob("*.png")))
-            shutil.rmtree(entry_dir)
-        return deleted
 

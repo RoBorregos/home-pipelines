@@ -251,13 +251,6 @@ def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
     return {"imported": imported}
 
 
-@app.delete("/repo/{label}/{identifier}")
-def repo_delete(label: str, identifier: str, x_api_key: str = Header(None)):
-    _auth(x_api_key)
-    deleted = RepoManager().delete_entry(label, identifier)
-    return {"deleted_images": deleted}
-
-
 # ── Log streaming ─────────────────────────────────────────────────────────────
 
 @app.get("/logs/stream")
