@@ -35,10 +35,14 @@ class PipelineState:
     train_done: bool = False
     # Per-class segmentation tracking {class_name: bool}
     segmented_classes: dict = None
+    # Classes imported from the global repo {class_name: {"identifier": str, "from_repo": True}}
+    imported_classes: dict = None
 
     def __post_init__(self):
         if self.segmented_classes is None:
             self.segmented_classes = {}
+        if self.imported_classes is None:
+            self.imported_classes = {}
 
     def run_workdir(self) -> Path:
         if not self.run_name:
@@ -79,10 +83,19 @@ def list_runs() -> list[dict]:
         return []
     runs = []
     for d in sorted(RUNS_DIR.iterdir()):
-        if not d.is_dir():
+        if not d.is_dir() or d.name.startswith("_"):
             continue
         classes = [c.name for c in (d / "cropped").iterdir() if c.is_dir()] \
                   if (d / "cropped").exists() else []
+        sidecar = d / "imported_classes.json"
+        if sidecar.exists():
+            try:
+                imported = json.loads(sidecar.read_text())
+                for cls in imported:
+                    if cls not in classes:
+                        classes.append(cls)
+            except Exception:
+                pass
         runs.append({
             "name": d.name,
             "classes": classes,

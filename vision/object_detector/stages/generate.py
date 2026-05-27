@@ -10,6 +10,7 @@ CLI usage:
     python -m stages.generate /path/to/workdir /path/to/output [--n 15000]
 """
 
+import json
 import logging
 import math
 import os
@@ -167,25 +168,34 @@ def run(
     """Returns path to the generated data.yaml."""
     workdir = Path(workdir)
     out = Path(output_folder)
-    ds_res_dir = workdir / "cropped"
     bg_dir = Path(bg_dir) if bg_dir else workdir / "backgrounds"
 
-    if not ds_res_dir.exists():
-        raise FileNotFoundError(f"cropped/ not found at {ds_res_dir}. Run segmentation first.")
+    # ── Class setup: merge local cropped/ with repo pointer imports ──────────
+    imported_json = workdir / "imported_classes.json"
+    imported_meta = json.loads(imported_json.read_text()) if imported_json.exists() else {}
 
-    # ── Class setup ──────────────────────────────────────────────────────────
-    class_dirs = sorted([d for d in ds_res_dir.iterdir() if d.is_dir()])
-    if not class_dirs:
-        raise ValueError(f"No class directories in {ds_res_dir}")
+    class_paths: dict[str, Path] = {}
+    cropped = workdir / "cropped"
+    if cropped.exists():
+        for d in sorted(cropped.iterdir()):
+            if d.is_dir() and any(d.iterdir()):
+                class_paths[d.name] = d
+    for cls, info in imported_meta.items():
+        if info.get("from_repo") and info.get("repo_path"):
+            class_paths[cls] = Path(info["repo_path"])
 
-    detected = [d.name for d in class_dirs]
+    if not class_paths:
+        raise ValueError("No class image sources found — run segmentation or import classes from the repo first.")
+
+    detected = sorted(class_paths.keys())
     final_classes = list(original_classes or [])
     for cls in detected:
         if cls not in final_classes:
             final_classes.append(cls)
 
     class_id = {cls: i for i, cls in enumerate(final_classes)}
-    fg_files = {d.name: [f for f in d.iterdir() if f.suffix == ".png"] for d in class_dirs}
+    fg_files = {cls: [f for f in class_paths[cls].iterdir() if f.suffix == ".png"]
+                for cls in detected}
     logger.info("Classes: %s", class_id)
 
     # ── Directory structure ───────────────────────────────────────────────────
@@ -195,7 +205,7 @@ def run(
 
     bg_files = _load_bg_images(bg_dir)
     logger.info("Backgrounds: %d | FG classes: %d | Target images: %d",
-                len(bg_files), len(class_dirs), images_to_generate)
+                len(bg_files), len(class_paths), images_to_generate)
 
     # ── Generation loop ───────────────────────────────────────────────────────
     objects_list = list(fg_files.keys())

@@ -100,8 +100,9 @@
       padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 500;
       background: var(--border); color: var(--muted);
     }
-    .chip.done  { background: #14532d55; color: #86efac; }
-    .chip.new   { background: #1d3461;   color: #93c5fd; }
+    .chip.done     { background: #14532d55; color: #86efac; }
+    .chip.new      { background: #1d3461;   color: #93c5fd; }
+    .chip.imported { background: #3b076455; color: #c4b5fd; }
 
     /* ── Log panel ── */
     .log-panel {
@@ -228,6 +229,34 @@
       <div class="row">
         <button class="btn-primary" id="btn-upload" onclick="doUpload()">⬇ Pull from Drive</button>
         <button class="btn-ghost" onclick="loadLog()">Logs</button>
+      </div>
+    </div>
+
+    <!-- 1b. Repository -->
+    <div class="stage-card" id="card-repo">
+      <div class="stage-header">
+        <div class="stage-num" id="num-repo" style="font-size:0.65rem">REP</div>
+        <span class="stage-title">Object Repository</span>
+        <button class="btn-ghost btn-sm" onclick="toggleRepoPanel()" id="btn-repo-toggle">▼ Show</button>
+      </div>
+      <p class="stage-desc">Import curated crops from the repo into this run (skips re-segmentation).</p>
+      <div id="repo-panel" style="display:none">
+
+        <!-- Import from existing repo entries -->
+        <p class="stage-desc" id="repo-empty-hint" style="color:#d97706;margin-bottom:8px">Repository is empty — publish classes from the Review UI first.</p>
+        <div class="row" style="margin-bottom:8px">
+          <select id="repo-label-sel" onchange="loadRepoIdentifiers()" style="width:130px;max-width:130px">
+            <option value="">— label —</option>
+          </select>
+          <select id="repo-id-sel" style="width:160px;max-width:160px">
+            <option value="">— identifier —</option>
+          </select>
+          <button class="btn-ghost btn-sm" onclick="addRepoSelection()">+ Add</button>
+        </div>
+        <div class="class-chips" id="repo-pending-chips" style="margin-bottom:8px"></div>
+        <div class="row">
+          <button class="btn-primary" id="btn-repo-import" onclick="doRepoImport()" disabled>⬇ Import selected into run</button>
+        </div>
       </div>
     </div>
 

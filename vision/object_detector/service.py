@@ -1,9 +1,11 @@
 """FastAPI service — HTTP endpoints, log streaming, inference, file serving."""
 import asyncio
 import io
+import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from dataclasses import asdict
@@ -15,12 +17,13 @@ from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from PIL import Image
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from pipeline_runner import PipelineRunner
 import state as ps
 from state import SEGMENT, GENERATE, TRAIN, BASE_DIR, RUNS_DIR
+from repo import RepoManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -95,6 +98,7 @@ def create_run(body: CreateRunBody, x_api_key: str = Header(None)):
     s.segment_done = s.review_done = s.generate_done = s.train_done = False
     s.error = s.running = s.data_yaml = s.best_weights = ""
     s.segmented_classes = {}
+    s.imported_classes = {}
     ps.save(s)
     return {"run_name": name}
 
@@ -114,6 +118,13 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     s.segmented_classes = {
         d.name: True for d in cropped.iterdir() if d.is_dir() and any(d.iterdir())
     } if cropped.exists() else {}
+    # Restore imported_classes from per-run sidecar, then merge into segmented_classes
+    # so pointer-based (repo) classes are visible even without a local cropped/ dir
+    sidecar = run_dir / "imported_classes.json"
+    s.imported_classes = json.loads(sidecar.read_text()) if sidecar.exists() else {}
+    for cls, info in s.imported_classes.items():
+        if info.get("from_repo"):
+            s.segmented_classes.setdefault(cls, True)
     s.segment_done  = bool(s.segmented_classes)
     s.generate_done = (run_dir / "dataset" / "data.yaml").exists()
     best_pt         = run_dir / "training" / "yolo" / "weights" / "best.pt"
@@ -133,6 +144,111 @@ def pipeline_reset(x_api_key: str = Header(None)):
     s.running = s.error = ""
     ps.save(s)
     return {"running": ""}
+
+
+# ── Global object repository ──────────────────────────────────────────────────
+
+@app.get("/repo")
+def repo_list():
+    return {"entries": RepoManager().list_entries()}
+
+
+@app.get("/repo/{label}")
+def repo_label(label: str):
+    rm = RepoManager()
+    entries = rm.list_entries()
+    label_key = rm._find_label_key(entries, label)
+    if label_key is None:
+        raise HTTPException(status_code=404, detail=f"Label '{label}' not found")
+    return {"label": label_key, "identifiers": entries[label_key].get("identifiers", {})}
+
+
+class PublishBody(BaseModel):
+    label: str
+    notes: str = ""
+
+
+@app.post("/repo/publish")
+def repo_publish(body: PublishBody, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    s = ps.load()
+    if not s.run_name:
+        raise HTTPException(status_code=400, detail="No active run")
+    identifier = f"{body.label}_{s.run_name}"
+    source_dir = RUNS_DIR / s.run_name / "cropped" / body.label
+    if not source_dir.exists():
+        raise HTTPException(status_code=400, detail=f"Class '{body.label}' not found in active run's cropped directory")
+    rm = RepoManager()
+    try:
+        count = rm.publish(body.label, identifier, source_dir,
+                           source_run=s.run_name, notes=body.notes)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    # Remove local copy — canonical source is now the global repo
+    shutil.rmtree(source_dir)
+
+    # Update state: class is now a repo pointer, not a local copy
+    repo_path = rm.entry_dir(body.label, identifier)
+    s.imported_classes[body.label] = {
+        "identifier": identifier,
+        "from_repo": True,
+        "repo_path": str(repo_path),
+    }
+    sidecar = RUNS_DIR / s.run_name / "imported_classes.json"
+    tmp = sidecar.with_suffix(".tmp")
+    tmp.write_text(json.dumps(s.imported_classes, indent=2))
+    os.replace(tmp, sidecar)
+    ps.save(s)
+
+    return {"label": body.label, "identifier": identifier, "image_count": count}
+
+
+class RepoImportBody(BaseModel):
+    imports: list  # [{"label": "Soap", "identifier": "BlueBottle"}, ...]
+
+
+@app.post("/repo/import")
+def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
+    _auth(x_api_key)
+    s = ps.load()
+    if not s.run_name:
+        raise HTTPException(status_code=400, detail="No active run")
+    rm = RepoManager()
+    entries = rm.list_entries()
+    imported = []
+    for entry in body.imports:
+        label = entry.get("label", "").strip()
+        identifier = entry.get("identifier", "").strip()
+        if not label or not identifier:
+            raise HTTPException(status_code=400, detail="Each import entry needs 'label' and 'identifier'")
+        label_key = rm._find_label_key(entries, label)
+        if label_key is None:
+            raise HTTPException(status_code=404, detail=f"Label '{label}' not found in repository")
+        if identifier not in entries[label_key].get("identifiers", {}):
+            raise HTTPException(status_code=404, detail=f"Identifier '{identifier}' not found under '{label_key}'")
+        repo_path = rm.entry_dir(label_key, identifier)
+        if not repo_path.exists():
+            raise HTTPException(status_code=404, detail=f"Repository directory missing: {repo_path}")
+        count = entries[label_key]["identifiers"][identifier].get("image_count", 0)
+        imported.append({"label": label_key, "identifier": identifier, "count": count})
+        s.segmented_classes[label_key] = True
+        s.imported_classes[label_key] = {
+            "identifier": identifier,
+            "from_repo": True,
+            "repo_path": str(repo_path),
+        }
+
+    if s.segmented_classes and not s.segment_done:
+        s.segment_done = True
+    ps.save(s)
+
+    sidecar = RUNS_DIR / s.run_name / "imported_classes.json"
+    tmp = sidecar.with_suffix(".tmp")
+    tmp.write_text(json.dumps(s.imported_classes, indent=2))
+    os.replace(tmp, sidecar)
+
+    return {"imported": imported}
 
 
 # ── Log streaming ─────────────────────────────────────────────────────────────
@@ -437,7 +553,7 @@ async def infer(
         _infer_model_path = s.best_weights
 
     img_bytes = await file.read()
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(img_bytes))).convert("RGB")
 
     results = _infer_model.predict(img, conf=conf, verbose=False)
     annotated = results[0].plot()  # BGR numpy array

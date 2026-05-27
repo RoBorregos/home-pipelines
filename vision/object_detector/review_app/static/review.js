@@ -44,12 +44,16 @@
 
   async function loadClasses() {
     const s = await fetch("/status").then(r => r.json());
-    classList = Object.keys(s.segmented_classes || {});
+    const imported = s.imported_classes || {};
+    // Exclude repo-imported classes — they are already curated and bypass review
+    classList = Object.keys(s.segmented_classes || {}).filter(
+      cls => !imported[cls]?.from_repo
+    );
     const bar = document.getElementById("class-bar");
     bar.innerHTML = "";
 
     if (!classList.length) {
-      bar.innerHTML = '<span style="color:#555;font-size:0.8rem">No segmented classes yet — run the segment stage first.</span>';
+      bar.innerHTML = '<span style="color:#555;font-size:0.8rem">No locally segmented classes to review — all classes are imported from the repo.</span>';
       return;
     }
 
@@ -189,7 +193,26 @@
   });
 
   btnApprove.addEventListener("click", async () => {
-    if (!confirm("Mark all classes as reviewed? This enables the Generate stage.")) return;
+    if (!confirm("Mark all classes as reviewed? This will publish all classes to the repo and enable the Generate stage.")) return;
+    btnApprove.disabled = true;
+
+    for (const cls of classList) {
+      showStatus(`Publishing "${cls}" to repo…`);
+      const pubRes = await fetch("/repo/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+        body: JSON.stringify({ label: cls }),
+      });
+      if (!pubRes.ok) {
+        const err = await pubRes.json().catch(() => ({}));
+        if (pubRes.status !== 409) {
+          showStatus(`Error publishing "${cls}": ${err.detail || pubRes.statusText}`, "error");
+          btnApprove.disabled = false;
+          return;
+        }
+      }
+    }
+
     const res = await fetch("/review/approve", {
       method: "POST",
       headers: { "x-api-key": getApiKey() },
@@ -197,10 +220,10 @@
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       showStatus(`Error: ${err.detail || res.statusText}`, "error");
+      btnApprove.disabled = false;
       return;
     }
-    showStatus("Marked as reviewed. You can now run Generate from the dashboard.", "success");
-    btnApprove.disabled = true;
+    showStatus("Published all classes and marked as reviewed. You can now run Generate from the dashboard.", "success");
   });
 
   // ── Init ─────────────────────────────────────────────────────────────────────
