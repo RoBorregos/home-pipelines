@@ -44,12 +44,16 @@
 
   async function loadClasses() {
     const s = await fetch("/status").then(r => r.json());
-    classList = Object.keys(s.segmented_classes || {});
+    const imported = s.imported_classes || {};
+    // Exclude repo-imported classes — they are already curated and bypass review
+    classList = Object.keys(s.segmented_classes || {}).filter(
+      cls => !imported[cls]?.from_repo
+    );
     const bar = document.getElementById("class-bar");
     bar.innerHTML = "";
 
     if (!classList.length) {
-      bar.innerHTML = '<span style="color:#555;font-size:0.8rem">No segmented classes yet — run the segment stage first.</span>';
+      bar.innerHTML = '<span style="color:#555;font-size:0.8rem">No locally segmented classes to review — all classes are imported from the repo.</span>';
       return;
     }
 

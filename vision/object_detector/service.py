@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from dataclasses import asdict
@@ -117,6 +118,13 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     s.segmented_classes = {
         d.name: True for d in cropped.iterdir() if d.is_dir() and any(d.iterdir())
     } if cropped.exists() else {}
+    # Restore imported_classes from per-run sidecar, then merge into segmented_classes
+    # so pointer-based (repo) classes are visible even without a local cropped/ dir
+    sidecar = run_dir / "imported_classes.json"
+    s.imported_classes = json.loads(sidecar.read_text()) if sidecar.exists() else {}
+    for cls, info in s.imported_classes.items():
+        if info.get("from_repo"):
+            s.segmented_classes.setdefault(cls, True)
     s.segment_done  = bool(s.segmented_classes)
     s.generate_done = (run_dir / "dataset" / "data.yaml").exists()
     best_pt         = run_dir / "training" / "yolo" / "weights" / "best.pt"
@@ -125,9 +133,6 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     s.review_done   = s.segment_done  # assume reviewed if segmented (user can override)
     data_yaml = run_dir / "dataset" / "data.yaml"
     s.data_yaml = str(data_yaml) if data_yaml.exists() else ""
-    # Restore imported_classes from per-run sidecar
-    sidecar = run_dir / "imported_classes.json"
-    s.imported_classes = json.loads(sidecar.read_text()) if sidecar.exists() else {}
     ps.save(s)
     return asdict(s)
 
@@ -178,11 +183,29 @@ def repo_publish(body: PublishBody, x_api_key: str = Header(None)):
     source_dir = RUNS_DIR / s.run_name / "cropped" / body.label
     if not source_dir.exists():
         raise HTTPException(status_code=400, detail=f"Class '{body.label}' not found in active run's cropped directory")
+    rm = RepoManager()
     try:
-        count = RepoManager().publish(body.label, identifier, source_dir,
-                                      source_run=s.run_name, notes=body.notes)
+        count = rm.publish(body.label, identifier, source_dir,
+                           source_run=s.run_name, notes=body.notes)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+    # Remove local copy — canonical source is now the global repo
+    shutil.rmtree(source_dir)
+
+    # Update state: class is now a repo pointer, not a local copy
+    repo_path = rm.entry_dir(body.label, identifier)
+    s.imported_classes[body.label] = {
+        "identifier": identifier,
+        "from_repo": True,
+        "repo_path": str(repo_path),
+    }
+    sidecar = RUNS_DIR / s.run_name / "imported_classes.json"
+    tmp = sidecar.with_suffix(".tmp")
+    tmp.write_text(json.dumps(s.imported_classes, indent=2))
+    os.replace(tmp, sidecar)
+    ps.save(s)
+
     return {"label": body.label, "identifier": identifier, "image_count": count}
 
 
@@ -196,21 +219,30 @@ def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
     s = ps.load()
     if not s.run_name:
         raise HTTPException(status_code=400, detail="No active run")
-    run_cropped = RUNS_DIR / s.run_name / "cropped"
     rm = RepoManager()
+    entries = rm.list_entries()
     imported = []
     for entry in body.imports:
         label = entry.get("label", "").strip()
         identifier = entry.get("identifier", "").strip()
         if not label or not identifier:
             raise HTTPException(status_code=400, detail="Each import entry needs 'label' and 'identifier'")
-        try:
-            count = rm.import_to_run(label, identifier, run_cropped)
-        except ValueError as e:
-            raise HTTPException(status_code=404, detail=str(e))
-        imported.append({"label": label, "identifier": identifier, "count": count})
-        s.segmented_classes[label] = True
-        s.imported_classes[label] = {"identifier": identifier, "from_repo": True}
+        label_key = rm._find_label_key(entries, label)
+        if label_key is None:
+            raise HTTPException(status_code=404, detail=f"Label '{label}' not found in repository")
+        if identifier not in entries[label_key].get("identifiers", {}):
+            raise HTTPException(status_code=404, detail=f"Identifier '{identifier}' not found under '{label_key}'")
+        repo_path = rm.entry_dir(label_key, identifier)
+        if not repo_path.exists():
+            raise HTTPException(status_code=404, detail=f"Repository directory missing: {repo_path}")
+        count = entries[label_key]["identifiers"][identifier].get("image_count", 0)
+        imported.append({"label": label_key, "identifier": identifier, "count": count})
+        s.segmented_classes[label_key] = True
+        s.imported_classes[label_key] = {
+            "identifier": identifier,
+            "from_repo": True,
+            "repo_path": str(repo_path),
+        }
 
     if s.segmented_classes and not s.segment_done:
         s.segment_done = True

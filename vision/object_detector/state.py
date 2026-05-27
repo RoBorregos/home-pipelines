@@ -89,6 +89,15 @@ def list_runs() -> list[dict]:
             continue
         classes = [c.name for c in (d / "cropped").iterdir() if c.is_dir()] \
                   if (d / "cropped").exists() else []
+        sidecar = d / "imported_classes.json"
+        if sidecar.exists():
+            try:
+                imported = json.loads(sidecar.read_text())
+                for cls in imported:
+                    if cls not in classes:
+                        classes.append(cls)
+            except Exception:
+                pass
         runs.append({
             "name": d.name,
             "classes": classes,

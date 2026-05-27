@@ -127,28 +127,6 @@ class RepoManager:
         self._save_index(data)
         return len(sources)
 
-    def import_to_run(self, label: str, identifier: str, run_cropped_dir: Path) -> int:
-        """Copy repo entry PNGs into the run's cropped/{label}/ directory."""
-        entries = self.list_entries()
-        label_key = self._find_label_key(entries, label)
-        if label_key is None:
-            raise ValueError(f"Label '{label}' not found in repository")
-        if identifier not in entries[label_key].get("identifiers", {}):
-            raise ValueError(f"Identifier '{identifier}' not found under '{label_key}'")
-
-        src_dir = self.repo_dir / label_key / identifier
-        if not src_dir.exists():
-            raise ValueError(f"Repository directory missing: {src_dir}")
-
-        dest_dir = run_cropped_dir / label_key
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        sources = sorted(src_dir.glob("*.png"))
-        for src in sources:
-            shutil.copy2(src, dest_dir / src.name)
-
-        return len(sources)
-
     def delete_entry(self, label: str, identifier: str) -> int:
         """Remove an identifier from the repo. Returns deleted image count."""
         data = self._load_index()
