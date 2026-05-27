@@ -7,6 +7,12 @@ It replaces a manual Jupyter notebook workflow with a persistent HTTP service th
 
 ---
 
+## How to Use the UI
+
+The step-by-step guide is built into the app itself. Click **How to use** in the top-right corner of the dashboard (or navigate to `/help`) to open it.
+
+---
+
 ## Architecture
 
 ### Components
@@ -16,6 +22,7 @@ object_detector/
 ├── service.py              # FastAPI app — all HTTP endpoints
 ├── pipeline_runner.py      # Thread management + logging setup for stages
 ├── state.py                # PipelineState dataclass + disk persistence
+├── repo.py                 # Global object repository (RepoManager)
 ├── stages/
 │   ├── segment.py          # GroundingDINO + SAM3 segmentation
 │   ├── generate.py         # Synthetic dataset compositor
@@ -27,16 +34,21 @@ object_detector/
 │   │   └── infer.html      # Live inference tester
 │   └── static/
 │       ├── auth.js         # Shared API key modal (localStorage)
-│       ├── app.js          # Dashboard logic + SSE log consumer
-│       ├── review.js       # Review grid, class navigation, delete/reject
+│       ├── app.js          # Dashboard logic + SSE log consumer + repo panel
+│       ├── review.js       # Review grid, class navigation, delete/reject, publish
 │       └── infer.js        # Image upload + inference display
 ├── backgrounds/            # Shared background images for dataset generation
 ├── pipeline_runs/          # One subdirectory per named run (created at runtime)
-│   └── {run_name}/
-│       ├── images/         # Extracted video frames, one subdir per class
-│       ├── cropped/        # Segmented BGRA PNGs cropped to object bbox
-│       ├── dataset/        # Generated YOLO dataset + data.yaml
-│       └── training/       # YOLO training output (best.pt inside)
+│   ├── {run_name}/
+│   │   ├── images/             # Extracted video frames, one subdir per class
+│   │   ├── cropped/            # Locally-segmented BGRA PNGs (deleted after publish)
+│   │   ├── imported_classes.json  # Repo pointer map {class: {identifier, repo_path}}
+│   │   ├── dataset/            # Generated YOLO dataset + data.yaml
+│   │   └── training/           # YOLO training output (best.pt inside)
+│   └── _repo/                  # Global object repository (shared across all runs)
+│       ├── repo_index.json     # Master index {label → {identifier → metadata}}
+│       └── {Label}/
+│           └── {identifier}/   # Sequential PNGs: 0001.png, 0002.png, …
 ├── pipeline_state.json     # Active run + stage completion flags (single file)
 └── logs/                   # Per-stage log files (streamed live to UI)
 ```
@@ -59,6 +71,8 @@ Browser → service.py → pipeline_runner.py → Thread → stages/segment.py
 
 **`state.py` — Shared memory.** A single JSON file (`pipeline_state.json`) that all layers read and write. Writes are atomic (`os.replace`) to prevent corruption. Stores the active run, which stage is running, per-stage completion flags, and the current log file path. When the service restarts, `activate_run` rebuilds the flags by inspecting the filesystem directly, so no state is lost.
 
+**`repo.py` — Global repository.** `RepoManager` owns `_repo/` — a directory of curated PNG sets indexed by label and identifier. `publish()` copies crops from a run's `cropped/` into the repo with sequential filenames and updates `repo_index.json`. `list_entries()` and `entry_dir()` are the read path used by the import endpoint and generate stage.
+
 **Log streaming.** `GET /logs/stream` is a Server-Sent Events endpoint that tails the active log file every 0.3 s and pushes each new line to the browser. It stops when `state.running` clears and sends a final `[DONE]` or `[ERROR]`. The browser opens this connection the moment a stage starts and auto-reconnects if the page reloads mid-run.
 
 ---
@@ -73,15 +87,24 @@ Downloads a public flat Google Drive folder with `gdown`, then extracts frames w
 
 Loads GroundingDINO + SAM3 once, then for each image: GroundingDINO detects bounding boxes using the class name as a text prompt → SAM3 generates a mask → best mask is selected by score → mask is morphologically cleaned and the object is cropped to its tight bounding box and saved as a transparent PNG in `cropped/{ClassName}/`. Classes already present in `cropped/` are skipped. Progress logged every 10 images.
 
-### 3. Review (`review_app/review.js` + endpoints)
+### 3. Global Repository (`repo.py` + `POST /repo/publish`, `POST /repo/import`)
 
-Browser gallery for inspecting and deleting bad segmented images per class. Supports per-image delete, bulk delete, Accept class (keep all, move to next), and Reject class (delete all, move to next). Marking as reviewed unlocks the Generate stage.
+Curated crops are stored once in `_repo/{Label}/{identifier}/` and reused across runs without re-segmentation.
 
-### 4. Generate dataset (`stages/generate.py`)
+- **Publish** (triggered automatically by "Mark reviewed"): copies `cropped/{Label}/` PNGs into the repo under identifier `{Label}_{run_name}`, then deletes the local copy. The run stores a pointer (`imported_classes.json`) so downstream stages read from the repo directly.
+- **Import** (REP panel on dashboard): registers a repo entry as a pointer in the active run with no file copy. The class is immediately visible to the Generate stage.
 
-Composites segmented objects onto random backgrounds to produce a synthetic YOLO dataset. Each image gets 1–8 randomly placed objects (10% chance of empty background), augmented with brightness, contrast, blur, noise, and JPEG artifacts. Labels are written in YOLO polygon format. Output is split 80/10/10 into `dataset/{train,valid,test}/` with a `data.yaml`. Progress logged every 100 images.
+`imported_classes.json` per run stores: `{ "ClassName": { "identifier": "...", "from_repo": true, "repo_path": "/abs/path/to/_repo/..." } }`.
 
-### 5. Train (`stages/train.py`)
+### 4. Review (`review_app/review.js` + endpoints)
+
+Browser gallery for inspecting and deleting bad segmented images per class. Only locally-segmented classes appear (repo-imported classes bypass review). Supports per-image delete, bulk delete, Accept class (keep all, move to next), and Reject class (delete all, move to next). **Mark reviewed** publishes all classes to the repo and unlocks Generate.
+
+### 5. Generate dataset (`stages/generate.py`)
+
+Composites segmented objects onto random backgrounds to produce a synthetic YOLO dataset. Image sources are resolved at runtime: local `cropped/{cls}/` for segmented classes, `repo_path` from `imported_classes.json` for repo-imported classes. Each image gets 1–8 randomly placed objects (10% chance of empty background), augmented with brightness, contrast, blur, noise, and JPEG artifacts. Labels are written in YOLO polygon format. Output is split 80/10/10 into `dataset/{train,valid,test}/` with a `data.yaml`. Progress logged every 100 images.
+
+### 6. Train (`stages/train.py`)
 
 Trains `yolo11m` via Ultralytics on the generated dataset. Ultralytics log output is redirected to the stages log file so it appears live in the UI. An `on_fit_epoch_end` callback logs box loss, cls loss, and mAP50 per epoch. Output: `training/yolo/weights/best.pt`.
 
@@ -93,13 +116,22 @@ Three single-page views (`index.html`, `review.html`, `infer.html`), each with a
 
 **`auth.js`** — loaded first on every page. Stores the key in `localStorage` (`od_api_key`), shows a modal on first visit. Exposes `getApiKey()` and `resetApiKey()`.
 
+### Repository API
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/repo` | — | List all labels and identifiers |
+| `GET` | `/repo/{label}` | — | List identifiers for a label |
+| `POST` | `/repo/publish` | ✓ | Publish active run's class to repo, delete local copy |
+| `POST` | `/repo/import` | ✓ | Register repo entry as pointer in active run |
+
 ---
 
 ## Relationship to `dataset_pipeline.ipynb`
 
 The notebook was the original manual workflow; the service is its automated replacement. The directory layout (`images/`, `cropped/`, `dataset/`, `training/`) is shared, so both can operate on the same run directory.
 
-Differences: the service enforces stage ordering, supports multiple named runs, and streams logs live instead of printing to cells.
+Differences: the service enforces stage ordering, supports multiple named runs, streams logs live, and maintains a cross-run global repository.
 
 ---
 

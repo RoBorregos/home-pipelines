@@ -65,6 +65,11 @@ def infer_page(request: Request):
     return templates.TemplateResponse(request, "infer.html")
 
 
+@app.get("/help")
+def help_page(request: Request):
+    return templates.TemplateResponse(request, "help.html")
+
+
 # ── Status & runs ─────────────────────────────────────────────────────────────
 
 @app.get("/status")

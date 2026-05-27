@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Use Object Detector Pipeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #222;
+      --border: #2a2a2a; --text: #e0e0e0; --muted: #666;
+      --blue: #2563eb; --green: #16a34a; --red: #c0392b; --yellow: #d97706;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 0.92rem; font-weight: 700; }
+    header a {
+      font-size: 0.8rem; color: var(--muted); text-decoration: none;
+      padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px;
+    }
+    header a:hover { color: var(--text); border-color: #555; }
+    header .spacer { flex: 1; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 780px; margin: 0 auto; padding: 32px 20px 64px;
+      width: 100%;
+    }
+
+    /* ── Typography ── */
+    h2 {
+      font-size: 1.4rem; font-weight: 700; margin-bottom: 24px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Step card ── */
+    .step {
+      display: flex; gap: 16px; margin-bottom: 28px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 20px;
+    }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+    }
+    .step-num.optional { background: var(--border); color: var(--muted); font-size: 0.62rem; }
+    .step-body { flex: 1; min-width: 0; }
+    .step-title {
+      font-size: 0.95rem; font-weight: 600; margin-bottom: 6px;
+    }
+    .step-title .badge {
+      display: inline-block; margin-left: 8px;
+      font-size: 0.65rem; font-weight: 600; padding: 2px 7px;
+      border-radius: 99px; background: var(--border); color: var(--muted);
+      vertical-align: middle;
+    }
+    .step-body p {
+      font-size: 0.83rem; color: #bbb; line-height: 1.65; margin-bottom: 8px;
+    }
+    .step-body p:last-child { margin-bottom: 0; }
+    code {
+      font-family: monospace; background: #2a2a2a; padding: 1px 5px;
+      border-radius: 3px; font-size: 0.82em;
+    }
+
+    /* ── Action table (review) ── */
+    .action-table { width: 100%; border-collapse: collapse; margin: 10px 0 0; font-size: 0.8rem; }
+    .action-table th {
+      text-align: left; color: var(--muted); font-weight: 600;
+      padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    .action-table td { padding: 7px 10px; border-bottom: 1px solid #1f1f1f; color: #ccc; }
+    .action-table tr:last-child td { border-bottom: none; }
+    .action-table td:first-child { white-space: nowrap; color: var(--text); font-weight: 500; }
+
+    /* ── Tip box ── */
+    .tip {
+      font-size: 0.8rem; color: #a3c4f3; background: #1a2744; border: 1px solid #2a3f6e;
+      border-radius: 7px; padding: 10px 14px; margin-top: 10px; line-height: 1.6;
+    }
+    .tip strong { color: #93c5fd; }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      .step { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📖 How to use</h1>
+  <span class="spacer"></span>
+  <a href="/">← Dashboard</a>
+</header>
+
+<div class="container">
+  <h2>Object Detector Pipeline</h2>
+
+  <!-- Step 0 -->
+  <div class="step">
+    <div class="step-num">0</div>
+    <div class="step-body">
+      <div class="step-title">Open the dashboard &amp; set your API key</div>
+      <p>Navigate to <code>http://localhost:8000</code> (or your Cloudflare tunnel URL).
+         On first visit, click <strong>API key</strong> in the top bar and enter your
+         <code>PIPELINE_API_KEY</code>. </p>
+    </div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Create or select a run</div>
+      <p>Click <strong>+ New</strong> in the top bar, give the run a name
+         (e.g. <code>kitchen_v1</code>), and press Enter. The run becomes active.</p>
+      <p>To resume a previous run, select it from the dropdown all stage flags are
+         restored from the filesystem automatically.</p>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Upload videos</div>
+      <p>In Google Drive, create a <strong>public shared folder</strong> and upload your
+         videos renamed as <code>ClassName&lt;N&gt;.mp4</code> for example
+         <code>Soap.mp4</code>, <code>Mug.mp4</code>. All files must be flat (no
+         subfolders). The class name is derived from the filename prefix.</p>
+      <p>Paste the folder URL into the <strong>Upload videos</strong> card and click
+         <strong>⬇ Pull from Drive</strong>. Frames are extracted at 10 fps into
+         <code>images/{ClassName}/</code>. Already-extracted videos are skipped, so
+         re-running is safe.</p>
+      <div class="tip">
+        <strong>Tip:</strong> Is recommended to use ~20 seconds of video per class.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 (optional) -->
+  <div class="step">
+    <div class="step-num optional">OPT</div>
+    <div class="step-body">
+      <div class="step-title">
+        Import classes from the Global Repository
+        <span class="badge">optional</span>
+      </div>
+      <p>If any classes were already curated in a previous run, you can reuse them
+         without re-segmenting. Open the <strong>REP Object Repository</strong> panel
+         (click <strong>▼ Show</strong>), pick a label and an identifier from the
+         dropdowns, click <strong>+ Add</strong> for each class, then click
+         <strong>⬇ Import selected into run</strong>.</p>
+      <div class="tip">
+        <strong>Tip:</strong> The repo panel shows all classes published from any
+        previous run. Use this to build a multi-class detector without
+        re-segmenting classes you already have.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Segment</div>
+      <p>Click <strong>▶ Run</strong> on the Segment card. GroundingDINO detects objects
+         in each frame using the class name as a text prompt; SAM3 generates a precise
+         mask; the best mask is cropped to a tight transparent PNG.</p>
+      <p>Classes already present are skipped automatically 
+         you can re-run segmentation safely. Progress streams live in the log panel.</p>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Review segmented images</div>
+      <p>Click <strong>Open Review UI</strong> to open <code>/review</code> in a new
+         tab. Use the class buttons at the top to switch between classes.</p>
+      <table class="action-table">
+        <thead>
+          <tr><th>Action</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Click image</td><td>Toggle selection</td></tr>
+          <tr><td>Select all / Clear</td><td>Bulk selection</td></tr>
+          <tr><td>Delete selected</td><td>Remove bad crops permanently</td></tr>
+          <tr><td>Accept class →</td><td>Keep all images, jump to next class</td></tr>
+          <tr><td>Reject class</td><td>Delete all images in this class, jump to next</td></tr>
+          <tr><td>✓ Mark reviewed</td><td>Publish all classes to the Global Repository, delete local copies, unlock Generate</td></tr>
+        </tbody>
+      </table>
+      <div class="tip" style="margin-top:12px">
+        <strong>Mark reviewed</strong> publishes each class automatically with the
+        identifier <code>{ClassName}_{run_name}</code>. Generate is
+        unlocked on the dashboard once this step completes.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <div class="step-title">Generate dataset</div>
+      <p>Click <strong>▶ Run</strong> on the Generate card. The stage composites
+         segmented objects onto random backgrounds
+         to produce a synthetic YOLO dataset.</p>
+      <p>Output is split 80/10/10 into <code>dataset/{train,valid,test}/</code> with a
+         <code>data.yaml</code>. Set the <strong>Images</strong> field to control the
+         total dataset size (default 15 000). Progress is logged every 100 images.</p>
+      <div class="tip">
+        <strong>Tip:</strong> Ajust the dataset size based on the number of classes.
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-body">
+      <div class="step-title">Train</div>
+      <p>Click <strong>▶ Run</strong> on the Train card. Trains
+         <code>yolo11m</code> on the generated dataset. Loss and mAP stream live in
+         the log panel.</p>
+      <p>Configure <strong>Device</strong> (GPU index, e.g. <code>0</code>),
+         <strong>Epochs</strong>, and <strong>Batch size</strong> before starting.</p>
+    </div>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step">
+    <div class="step-num">8</div>
+    <div class="step-body">
+      <div class="step-title">Inference</div>
+      <p>Once training finishes, click <strong>Test model</strong> in the Train card
+         (or go to <code>/infer</code>). Upload any image to run a prediction with the
+         trained model. Results are drawn with bounding boxes and confidence scores.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
