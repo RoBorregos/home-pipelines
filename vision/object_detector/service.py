@@ -153,11 +153,6 @@ def repo_list():
     return {"entries": RepoManager().list_entries()}
 
 
-@app.get("/repo/validate/{label}/{identifier}")
-def repo_validate(label: str, identifier: str):
-    return RepoManager().validate_entry(label, identifier)
-
-
 @app.get("/repo/{label}")
 def repo_label(label: str):
     rm = RepoManager()
@@ -254,7 +249,6 @@ def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
     os.replace(tmp, sidecar)
 
     return {"imported": imported}
-
 
 
 @app.delete("/repo/{label}/{identifier}")

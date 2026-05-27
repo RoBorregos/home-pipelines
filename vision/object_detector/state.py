@@ -9,8 +9,6 @@ import os
 BASE_DIR   = Path(__file__).parent
 RUNS_DIR   = BASE_DIR / "pipeline_runs"
 STATE_FILE = BASE_DIR / "pipeline_state.json"
-REPO_DIR   = RUNS_DIR / "_repo"
-REPO_INDEX = REPO_DIR / "repo_index.json"
 
 # Stage name constants
 SEGMENT  = "segment"

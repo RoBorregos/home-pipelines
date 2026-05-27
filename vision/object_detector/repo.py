@@ -1,6 +1,5 @@
 """Global object repository — stores curated crop PNGs indexed by Label + Identifier."""
 import json
-import logging
 import os
 import shutil
 from datetime import datetime
@@ -8,10 +7,7 @@ from pathlib import Path
 
 from state import RUNS_DIR
 
-REPO_DIR   = RUNS_DIR / "_repo"
-REPO_INDEX = REPO_DIR / "repo_index.json"
-
-_EMPTY_INDEX = {"version": 1, "entries": {}}
+REPO_DIR = RUNS_DIR / "_repo"
 
 
 class RepoManager:
@@ -37,16 +33,6 @@ class RepoManager:
     def list_entries(self) -> dict:
         return self._load_index().get("entries", {})
 
-    def list_labels(self) -> list:
-        return sorted(self.list_entries().keys())
-
-    def list_identifiers(self, label: str) -> list:
-        entries = self.list_entries()
-        label_key = self._find_label_key(entries, label)
-        if label_key is None:
-            return []
-        return sorted(entries[label_key].get("identifiers", {}).keys())
-
     def entry_dir(self, label: str, identifier: str) -> Path:
         return self.repo_dir / label / identifier
 
@@ -56,25 +42,6 @@ class RepoManager:
             if k.lower() == label.lower():
                 return k
         return None
-
-    def validate_entry(self, label: str, identifier: str) -> dict:
-        entries = self.list_entries()
-        label_key = self._find_label_key(entries, label)
-        if label_key is None:
-            return {"ok": False, "image_count": 0, "index_count": 0, "drift": 0, "missing": True}
-        id_data = entries[label_key].get("identifiers", {}).get(identifier)
-        if id_data is None:
-            return {"ok": False, "image_count": 0, "index_count": 0, "drift": 0, "missing": True}
-        entry_dir = self.entry_dir(label_key, identifier)
-        actual = len(list(entry_dir.glob("*.png"))) if entry_dir.exists() else 0
-        index_count = id_data.get("image_count", 0)
-        return {
-            "ok": actual == index_count and actual > 0,
-            "image_count": actual,
-            "index_count": index_count,
-            "drift": actual - index_count,
-            "missing": not entry_dir.exists(),
-        }
 
     # ── Mutations ─────────────────────────────────────────────────────────────
 
