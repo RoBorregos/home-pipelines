@@ -9,7 +9,7 @@ It replaces a manual Jupyter notebook workflow with a persistent HTTP service th
 
 ## How to Use the UI
 
-The step-by-step guide is built into the app itself. Click **? Help** in the top-right corner of the dashboard (or navigate to `/help`) to open it.
+The step-by-step guide is built into the app itself. Click **How to use** in the top-right corner of the dashboard (or navigate to `/help`) to open it.
 
 ---
 
