@@ -431,7 +431,9 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
                 out_dir = (BASE_DIR / "backgrounds") if is_background \
                           else (run_images / class_name)
 
-                if _frames_exist(out_dir, video.stem):
+                # Object classes skip if already extracted; background videos
+                # always re-extract, replacing their existing frames.
+                if not is_background and _frames_exist(out_dir, video.stem):
                     log.info("  SKIP  %s  (already extracted)", video.name)
                     skipped_count += 1
                     continue
@@ -446,7 +448,7 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
                 total_frames += n
                 if is_background:
                     bg_count += 1
-                    log.info("  BG    %s  → backgrounds → %d frames", video.name, n)
+                    log.info("  BG    %s  → backgrounds (replaced) → %d frames", video.name, n)
                 else:
                     new_count += 1
                     log.info("  NEW   %s  → class '%s' → %d frames", video.name, class_name, n)
