@@ -348,6 +348,9 @@ def stage_train(body: TrainBody, x_api_key: str = Header(None)):
 
 VIDEO_EXTS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 _CLASS_RE = re.compile(r"^([A-Za-z][A-Za-z_]*)(\d+)$")
+# Videos with these (lowercased, number-stripped) names populate the shared
+# backgrounds folder instead of being segmented as an object class.
+BACKGROUND_NAMES = {"background", "backgrounds"}
 
 
 def _parse_class(stem: str) -> str:
@@ -420,11 +423,13 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
 
             log.info("Found %d video(s) in Drive folder", len(all_videos))
 
-            new_count = skipped_count = total_frames = 0
+            new_count = skipped_count = total_frames = bg_count = 0
 
             for video in all_videos:
                 class_name = _parse_class(video.stem)
-                out_dir = run_images / class_name
+                is_background = class_name.lower() in BACKGROUND_NAMES
+                out_dir = (BASE_DIR / "backgrounds") if is_background \
+                          else (run_images / class_name)
 
                 if _frames_exist(out_dir, video.stem):
                     log.info("  SKIP  %s  (already extracted)", video.name)
@@ -439,12 +444,16 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
                 )
                 n = len(list(out_dir.glob(f"{video.stem}_*.png")))
                 total_frames += n
-                new_count += 1
-                log.info("  NEW   %s  → class '%s' → %d frames", video.name, class_name, n)
+                if is_background:
+                    bg_count += 1
+                    log.info("  BG    %s  → backgrounds → %d frames", video.name, n)
+                else:
+                    new_count += 1
+                    log.info("  NEW   %s  → class '%s' → %d frames", video.name, class_name, n)
 
             log.info(
-                "Done: %d new (%d frames total), %d skipped (already on server)",
-                new_count, total_frames, skipped_count,
+                "Done: %d new, %d background (%d frames total), %d skipped (already on server)",
+                new_count, bg_count, total_frames, skipped_count,
             )
 
     import threading
