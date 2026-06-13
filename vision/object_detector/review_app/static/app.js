@@ -289,7 +289,6 @@
   };
 
   // ── Repository ────────────────────────────────────────────────────────────
-  let _repoPending = []; // [{label, identifier}]
 
   window.toggleRepoPanel = () => {
     const panel = document.getElementById("repo-panel");
@@ -306,81 +305,96 @@
       const data = await fetch("/repo").then(r => r.json());
       const entries = data.entries || {};
       const labels = Object.keys(entries).sort();
+      const list = document.getElementById("repo-checklist");
+      list.innerHTML = "";
 
-      const sel = document.getElementById("repo-label-sel");
-      const current = sel.value;
-      sel.innerHTML = '<option value="">— label —</option>';
       labels.forEach(label => {
-        const opt = document.createElement("option");
-        opt.value = label;
-        const idCount = Object.keys(entries[label].identifiers || {}).length;
-        opt.textContent = `${label}  (${idCount} id${idCount !== 1 ? "s" : ""})`;
-        if (label === current) opt.selected = true;
-        sel.appendChild(opt);
+        const ids = Object.keys(entries[label].identifiers || {}).sort();
+        const row = document.createElement("label");
+        row.style.cssText =
+          "display:flex;align-items:center;gap:8px;padding:6px 10px;" +
+          "border-bottom:1px solid var(--border);font-size:0.82rem;cursor:pointer";
+
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.className = "repo-chk";
+        chk.dataset.label = label;
+        chk.addEventListener("change", updateRepoSelection);
+
+        const name = document.createElement("span");
+        name.textContent = label;
+        name.style.flex = "1";
+
+        row.appendChild(chk);
+        row.appendChild(name);
+
+        if (ids.length > 1) {
+          const sel = document.createElement("select");
+          sel.className = "repo-id";
+          sel.dataset.label = label;
+          sel.style.cssText = "font-size:0.76rem;padding:2px 6px";
+          ids.forEach(id => {
+            const opt = document.createElement("option");
+            opt.value = id;
+            opt.textContent = `${id} (${entries[label].identifiers[id].image_count})`;
+            sel.appendChild(opt);
+          });
+          // Don't toggle the checkbox when interacting with the dropdown
+          sel.addEventListener("click", e => e.preventDefault());
+          row.appendChild(sel);
+        } else {
+          chk.dataset.identifier = ids[0] || "";
+          const idTxt = document.createElement("span");
+          idTxt.className = "cfg-label";
+          idTxt.textContent = `${ids[0] || "—"} (${ids[0] ? entries[label].identifiers[ids[0]].image_count : 0})`;
+          row.appendChild(idTxt);
+        }
+
+        list.appendChild(row);
       });
 
       const hint = document.getElementById("repo-empty-hint");
       if (hint) hint.style.display = labels.length ? "none" : "";
+      list.style.display = labels.length ? "" : "none";
+      updateRepoSelection();
     } catch (_) {}
   }
 
-  window.loadRepoIdentifiers = async () => {
-    const label = document.getElementById("repo-label-sel").value;
-    const sel = document.getElementById("repo-id-sel");
-    sel.innerHTML = '<option value="">— identifier —</option>';
-    if (!label) return;
-    try {
-      const data = await fetch(`/repo/${encodeURIComponent(label)}`).then(r => r.json());
-      const ids = Object.keys(data.identifiers || {}).sort();
-      ids.forEach(id => {
-        const opt = document.createElement("option");
-        const info = data.identifiers[id];
-        opt.value = id;
-        opt.textContent = `${id}  (${info.image_count} imgs)`;
-        sel.appendChild(opt);
-      });
-      // Auto-select when there's only one identifier
-      if (ids.length === 1) sel.value = ids[0];
-    } catch (_) {}
-  };
-
-  window.addRepoSelection = () => {
-    const label = document.getElementById("repo-label-sel").value;
-    const id    = document.getElementById("repo-id-sel").value;
-    if (!label || !id) { toast("Select a label and identifier", "error"); return; }
-    if (_repoPending.some(e => e.label === label && e.identifier === id)) return;
-    _repoPending.push({ label, identifier: id });
-    renderRepoPending();
-    document.getElementById("btn-repo-import").disabled = false;
-  };
-
-  function renderRepoPending() {
-    const container = document.getElementById("repo-pending-chips");
-    container.innerHTML = "";
-    _repoPending.forEach((entry, i) => {
-      const chip = document.createElement("span");
-      chip.className = "chip imported";
-      chip.style.cursor = "pointer";
-      chip.title = "Click to remove";
-      chip.textContent = `${entry.label} / ${entry.identifier} ✕`;
-      chip.onclick = () => { _repoPending.splice(i, 1); renderRepoPending(); if (!_repoPending.length) document.getElementById("btn-repo-import").disabled = true; };
-      container.appendChild(chip);
-    });
+  function updateRepoSelection() {
+    const n = document.querySelectorAll(".repo-chk:checked").length;
+    const countEl = document.getElementById("repo-count");
+    if (countEl) countEl.textContent = n ? `${n} selected` : "";
+    document.getElementById("btn-repo-import").disabled = n === 0;
   }
+
+  window.repoSelectAll = () => {
+    document.querySelectorAll(".repo-chk").forEach(c => c.checked = true);
+    updateRepoSelection();
+  };
+  window.repoClearAll = () => {
+    document.querySelectorAll(".repo-chk").forEach(c => c.checked = false);
+    updateRepoSelection();
+  };
 
   window.doRepoImport = async () => {
-    if (!_repoPending.length) return;
+    const imports = [];
+    document.querySelectorAll(".repo-chk:checked").forEach(chk => {
+      const label = chk.dataset.label;
+      const sel = document.querySelector(`select.repo-id[data-label="${label}"]`);
+      const identifier = sel ? sel.value : chk.dataset.identifier;
+      if (identifier) imports.push({ label, identifier });
+    });
+    if (!imports.length) return;
     try {
       document.getElementById("btn-repo-import").disabled = true;
-      const result = await api("POST", "/repo/import", { imports: _repoPending });
+      const result = await api("POST", "/repo/import", { imports });
       const names = result.imported.map(e => `${e.label}/${e.identifier} (${e.count})`).join(", ");
       toast(`Imported: ${names}`, "success");
-      _repoPending = [];
-      renderRepoPending();
       await poll();
+      await loadRepo();
     } catch (e) {
       toast(e.message, "error");
-      document.getElementById("btn-repo-import").disabled = false;
+      updateRepoSelection();
     }
   };
 

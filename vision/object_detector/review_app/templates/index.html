@@ -249,15 +249,11 @@
         <!-- Import from existing repo entries -->
         <p class="stage-desc" id="repo-empty-hint" style="color:#d97706;margin-bottom:8px">Repository is empty — publish classes from the Review UI first.</p>
         <div class="row" style="margin-bottom:8px">
-          <select id="repo-label-sel" onchange="loadRepoIdentifiers()" style="width:130px;max-width:130px">
-            <option value="">— label —</option>
-          </select>
-          <select id="repo-id-sel" style="width:160px;max-width:160px">
-            <option value="">— identifier —</option>
-          </select>
-          <button class="btn-ghost btn-sm" onclick="addRepoSelection()">+ Add</button>
+          <button class="btn-ghost btn-sm" onclick="repoSelectAll()">Select all</button>
+          <button class="btn-ghost btn-sm" onclick="repoClearAll()">Clear</button>
+          <span id="repo-count" class="cfg-label"></span>
         </div>
-        <div class="class-chips" id="repo-pending-chips" style="margin-bottom:8px"></div>
+        <div id="repo-checklist" style="max-height:220px;overflow-y:auto;margin-bottom:8px;border:1px solid var(--border);border-radius:8px"></div>
         <div class="row">
           <button class="btn-primary" id="btn-repo-import" onclick="doRepoImport()" disabled>⬇ Import selected into run</button>
         </div>
