@@ -331,13 +331,16 @@
     if (!label) return;
     try {
       const data = await fetch(`/repo/${encodeURIComponent(label)}`).then(r => r.json());
-      Object.keys(data.identifiers || {}).sort().forEach(id => {
+      const ids = Object.keys(data.identifiers || {}).sort();
+      ids.forEach(id => {
         const opt = document.createElement("option");
         const info = data.identifiers[id];
         opt.value = id;
         opt.textContent = `${id}  (${info.image_count} imgs)`;
         sel.appendChild(opt);
       });
+      // Auto-select when there's only one identifier
+      if (ids.length === 1) sel.value = ids[0];
     } catch (_) {}
   };
 

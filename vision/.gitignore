@@ -6,6 +6,7 @@ object_detector/venv
 # Shared resources
 object_detector/models/*
 object_detector/backgrounds/*
+object_detector/backs_backup/*
 **.env
 
 # Pipeline runs
