@@ -1,5 +1,6 @@
 """Launches pipeline stages as background threads and manages their log files."""
 import logging
+import subprocess
 import sys
 import threading
 from datetime import datetime
@@ -98,12 +99,24 @@ class PipelineRunner:
             self._fail(str(exc))
 
     def _run_train(self, data_yaml: str, device: str, epochs: int, batch: int) -> None:
-        from stages import train
+        # Run in a fresh subprocess
+        log = logging.getLogger("stages")
         try:
-            best = train.run(data_yaml=data_yaml, device=device, epochs=epochs, batch=batch)
-            self._finish(TRAIN, best_weights=best)
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "stages.train", data_yaml,
+                 "--device", device, "--epochs", str(epochs), "--batch", str(batch)],
+                cwd=str(Path(__file__).parent),
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1,
+            )
+            for line in proc.stdout:
+                log.info("%s", line.rstrip())
+            if proc.wait() != 0:
+                raise RuntimeError(f"training subprocess exited with code {proc.returncode}")
+            best = Path(data_yaml).parent.parent / "training" / "yolo" / "weights" / "best.pt"
+            self._finish(TRAIN, best_weights=str(best))
         except Exception as exc:
-            logging.getLogger("stages").exception("Training failed")
+            log.exception("Training failed")
             self._fail(str(exc))
 
     # ── Public API ────────────────────────────────────────────────────────────
