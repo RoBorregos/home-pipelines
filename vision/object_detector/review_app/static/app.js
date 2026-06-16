@@ -2,6 +2,7 @@
 
   let sseSource  = null;
   let pollTimer  = null;
+  let currentRun = localStorage.getItem("od_current_run") || "";
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   function toast(msg, type = "info") {
@@ -15,7 +16,11 @@
   async function api(method, path, body) {
     const res = await fetch(path, {
       method,
-      headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": getApiKey(),
+        "X-Run": currentRun,
+      },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     if (!res.ok) {
@@ -43,8 +48,9 @@
       '<p style="color:var(--muted);font-size:0.72rem">Cleared.</p>';
   };
   window.loadLog = async () => {
+    if (!currentRun) return;
     expandLog();
-    const data = await fetch("/logs/file").then(r => r.json());
+    const data = await fetch(`/logs/file?run=${encodeURIComponent(currentRun)}`).then(r => r.json());
     const body = document.getElementById("log-body");
     body.innerHTML = "";
     if (!data.lines?.length) {
@@ -70,9 +76,10 @@
 
   function startSSE() {
     if (sseSource) { sseSource.close(); sseSource = null; }
+    if (!currentRun) return;
     window.clearLog();
     expandLog();
-    sseSource = new EventSource("/logs/stream");
+    sseSource = new EventSource(`/logs/stream?run=${encodeURIComponent(currentRun)}`);
     sseSource.onmessage = e => appendLog(e.data);
     sseSource.onerror = () => { sseSource?.close(); sseSource = null; };
   }
@@ -92,7 +99,11 @@
   }
 
   window.activateRun = async (name) => {
-    if (!name) return;
+    // Switch which run this browser is viewing/driving (state lives per-run on the server).
+    currentRun = name || "";
+    localStorage.setItem("od_current_run", currentRun);
+    if (sseSource) { sseSource.close(); sseSource = null; }
+    if (!name) { renderStatus({}); return; }
     try {
       const s = await api("POST", `/runs/${name}/activate`, {});
       renderStatus(s);
@@ -114,7 +125,7 @@
       closeModal();
       await loadRuns(name);
       toast(`Run "${name}" created and activated`, "success");
-      await poll();
+      await activateRun(name);
     } catch (e) { toast(e.message, "error"); }
   };
 
@@ -137,6 +148,13 @@
   }
 
   function renderStatus(s) {
+    // Point the Review / Test-model links at the currently selected run
+    const q = currentRun ? `?run=${encodeURIComponent(currentRun)}` : "";
+    const reviewLink = document.getElementById("link-review");
+    if (reviewLink) reviewLink.href = `/review${q}`;
+    const inferLink = document.getElementById("btn-infer");
+    if (inferLink) inferLink.href = `/infer${q}`;
+
     const running = s.running || "";
     const statusEl = document.getElementById("hdr-status");
     statusEl.textContent = running || (s.error ? "error" : s.run_name ? "idle" : "no run");
@@ -218,8 +236,9 @@
 
   // ── Polling ───────────────────────────────────────────────────────────────
   async function poll() {
+    if (!currentRun) { renderStatus({}); return; }
     try {
-      const s = await fetch("/status").then(r => r.json());
+      const s = await fetch(`/status?run=${encodeURIComponent(currentRun)}`).then(r => r.json());
       renderStatus(s);
       return s;
     } catch (_) {}
@@ -401,8 +420,14 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   (async () => {
+    await loadRuns(currentRun);
+    const sel = document.getElementById("run-select");
+    if (currentRun && sel.value !== currentRun) {
+      // stored run no longer exists on the server
+      currentRun = "";
+      localStorage.removeItem("od_current_run");
+    }
     const s = await poll();
-    await loadRuns(s?.run_name || "");
     startPolling();
     if (s?.running) { startSSE(); }
   })();

@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 from pydantic import BaseModel
 
-from pipeline_runner import PipelineRunner
+from pipeline_runner import PipelineRunner, register_thread_log, unregister_thread_log
 import state as ps
 from state import SEGMENT, GENERATE, TRAIN, BASE_DIR, RUNS_DIR
 from repo import RepoManager
@@ -39,6 +39,16 @@ app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "review_a
 def _auth(key: str) -> None:
     if key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def _run(run_name: str | None) -> str:
+    """Resolve and validate the target run for a request (X-Run header or ?run=)."""
+    name = (run_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="No run specified")
+    if not (RUNS_DIR / name).exists():
+        raise HTTPException(status_code=404, detail=f"Run '{name}' not found")
+    return name
 
 
 def _safe_child(raw: str, base: Path) -> Path:
@@ -73,8 +83,8 @@ def help_page(request: Request):
 # ── Status & runs ─────────────────────────────────────────────────────────────
 
 @app.get("/status")
-def get_status():
-    return asdict(ps.load())
+def get_status(run: str):
+    return asdict(ps.load(_run(run)))
 
 
 @app.get("/runs")
@@ -97,14 +107,8 @@ def create_run(body: CreateRunBody, x_api_key: str = Header(None)):
         raise HTTPException(status_code=409, detail=f"Run '{name}' already exists")
     for sub in ("images", "cropped", "dataset", "training", "logs"):
         (run_dir / sub).mkdir(parents=True)
-    # Activate the new run
-    s = ps.load()
-    s.run_name = name
-    s.segment_done = s.review_done = s.generate_done = s.train_done = False
-    s.error = s.running = s.data_yaml = s.best_weights = ""
-    s.segmented_classes = {}
-    s.imported_classes = {}
-    ps.save(s)
+    # Initialize the new run's state file
+    ps.save(ps.PipelineState(run_name=name))
     return {"run_name": name}
 
 
@@ -113,11 +117,11 @@ def activate_run(name: str, x_api_key: str = Header(None)):
     _auth(x_api_key)
     if not (RUNS_DIR / name).exists():
         raise HTTPException(status_code=404, detail=f"Run '{name}' not found")
-    s = ps.load()
-    if s.running:
-        raise HTTPException(status_code=409, detail=f"Stage '{s.running}' is running — wait for it to finish")
-    s.run_name = name
-    # Restore completion state from filesystem
+    # The run's own state.json is the source of truth once it exists.
+    if ps._state_file(name).exists():
+        return asdict(ps.load(name))
+    # No persisted state yet (legacy / externally-created run): seed it from the filesystem.
+    s = ps.load(name)
     run_dir = RUNS_DIR / name
     cropped = run_dir / "cropped"
     s.segmented_classes = {
@@ -143,9 +147,9 @@ def activate_run(name: str, x_api_key: str = Header(None)):
 
 
 @app.post("/pipeline/reset")
-def pipeline_reset(x_api_key: str = Header(None)):
+def pipeline_reset(x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
+    s = ps.load(_run(x_run))
     s.running = s.error = ""
     ps.save(s)
     return {"running": ""}
@@ -174,11 +178,9 @@ class PublishBody(BaseModel):
 
 
 @app.post("/repo/publish")
-def repo_publish(body: PublishBody, x_api_key: str = Header(None)):
+def repo_publish(body: PublishBody, x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
-    if not s.run_name:
-        raise HTTPException(status_code=400, detail="No active run")
+    s = ps.load(_run(x_run))
     identifier = f"{body.label}_{s.run_name}"
     source_dir = RUNS_DIR / s.run_name / "cropped" / body.label
     if not source_dir.exists():
@@ -214,11 +216,9 @@ class RepoImportBody(BaseModel):
 
 
 @app.post("/repo/import")
-def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
+def repo_import(body: RepoImportBody, x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
-    if not s.run_name:
-        raise HTTPException(status_code=400, detail="No active run")
+    s = ps.load(_run(x_run))
     rm = RepoManager()
     entries = rm.list_entries()
     imported = []
@@ -259,9 +259,10 @@ def repo_import(body: RepoImportBody, x_api_key: str = Header(None)):
 # ── Log streaming ─────────────────────────────────────────────────────────────
 
 @app.get("/logs/stream")
-async def logs_stream():
+async def logs_stream(run: str):
+    run_name = _run(run)
     async def generate():
-        s = ps.load()
+        s = ps.load(run_name)
         log_file = Path(s.log_file) if s.log_file else None
         if not log_file or not log_file.exists():
             yield "data: [no active log]\n\n"
@@ -275,7 +276,7 @@ async def logs_stream():
             if chunk:
                 for line in chunk.splitlines():
                     yield f"data: {line}\n\n"
-            current = ps.load()
+            current = ps.load(run_name)
             if not current.running:
                 yield f"data: {'[ERROR] ' + current.error if current.error else '[DONE]'}\n\n"
                 break
@@ -286,8 +287,8 @@ async def logs_stream():
 
 
 @app.get("/logs/file")
-def logs_file():
-    s = ps.load()
+def logs_file(run: str):
+    s = ps.load(_run(run))
     if not s.log_file or not Path(s.log_file).exists():
         return {"lines": []}
     return {"lines": Path(s.log_file).read_text(encoding="utf-8").splitlines()}
@@ -296,10 +297,11 @@ def logs_file():
 # ── Stage control ─────────────────────────────────────────────────────────────
 
 @app.post("/stage/segment/run")
-def stage_segment(x_api_key: str = Header(None)):
+def stage_segment(x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
+    run = _run(x_run)
     try:
-        runner.start_segment()
+        runner.start_segment(run)
         return {"running": SEGMENT}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
@@ -310,13 +312,14 @@ class GenerateBody(BaseModel):
 
 
 @app.post("/stage/generate/run")
-def stage_generate(body: GenerateBody, x_api_key: str = Header(None)):
+def stage_generate(body: GenerateBody, x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
+    run = _run(x_run)
+    s = ps.load(run)
     if not s.review_done:
         raise HTTPException(status_code=409, detail="Review must be done first")
     try:
-        runner.start_generate(body.images_to_generate)
+        runner.start_generate(run, body.images_to_generate)
         return {"running": GENERATE}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
@@ -329,13 +332,14 @@ class TrainBody(BaseModel):
 
 
 @app.post("/stage/train/run")
-def stage_train(body: TrainBody, x_api_key: str = Header(None)):
+def stage_train(body: TrainBody, x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
+    run = _run(x_run)
+    s = ps.load(run)
     if not s.generate_done:
         raise HTTPException(status_code=409, detail="Generate stage must be done first")
     try:
-        runner.start_train(body.device, body.epochs, body.batch)
+        runner.start_train(run, body.device, body.epochs, body.batch)
         return {"running": TRAIN}
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
@@ -369,32 +373,29 @@ class GdownBody(BaseModel):
 
 
 @app.post("/upload/gdrive")
-def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
+def upload_gdrive(body: GdownBody, x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
-    if not s.run_name:
-        raise HTTPException(status_code=400, detail="No active run")
+    run = _run(x_run)
+    s = ps.load(run)
 
-    run_images = RUNS_DIR / s.run_name / "images"
+    run_images = RUNS_DIR / run / "images"
     log_dir = BASE_DIR / "logs"
     log_dir.mkdir(exist_ok=True)
-    log_file = log_dir / f"{s.run_name}_upload.log"
+    log_file = log_dir / f"{run}_upload.log"
+    log_file.write_text("", encoding="utf-8")
 
-    snap = ps.load()
-    snap.log_file = str(log_file)
-    ps.save(snap)
+    s.log_file = str(log_file)
+    ps.save(s)
 
     def _pull():
+        register_thread_log(log_file)
         log = logging.getLogger("stages")
-        log.handlers.clear()
-        fh = logging.FileHandler(log_file, mode="w", encoding="utf-8")
-        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
-        sh = logging.StreamHandler()
-        sh.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
-        log.addHandler(fh)
-        log.addHandler(sh)
-        log.setLevel(logging.INFO)
+        try:
+            _do_pull(log)
+        finally:
+            unregister_thread_log()
 
+    def _do_pull(log):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             log.info("Downloading Drive folder: %s", body.drive_url)
@@ -405,7 +406,7 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
             )
             if result.returncode != 0:
                 log.error("gdown failed:\n%s", result.stderr)
-                _fail_upload(result.stderr)
+                _fail_upload(run, result.stderr)
                 return
 
             # gdown places content inside a subfolder named after the Drive folder
@@ -460,11 +461,11 @@ def upload_gdrive(body: GdownBody, x_api_key: str = Header(None)):
 
     import threading
     threading.Thread(target=_pull, daemon=True).start()
-    return {"status": "downloading", "run": s.run_name}
+    return {"status": "downloading", "run": run}
 
 
-def _fail_upload(error: str) -> None:
-    s = ps.load()
+def _fail_upload(run: str, error: str) -> None:
+    s = ps.load(run)
     s.error = f"Upload failed: {error}"
     ps.save(s)
 
@@ -472,16 +473,14 @@ def _fail_upload(error: str) -> None:
 # ── Review ────────────────────────────────────────────────────────────────────
 
 @app.get("/review/images")
-def review_images(class_name: str, page: int = 0, page_size: int = 24):
-    s = ps.load()
-    if not s.run_name:
-        raise HTTPException(status_code=400, detail="No active run")
-    review_dir = RUNS_DIR / s.run_name / "cropped" / class_name
+def review_images(run: str, class_name: str, page: int = 0, page_size: int = 24):
+    run_name = _run(run)
+    review_dir = RUNS_DIR / run_name / "cropped" / class_name
     if not review_dir.exists():
         return {"images": [], "total": 0, "class_name": class_name}
 
     all_images = sorted([
-        f"/review/imgs/{s.run_name}/cropped/{class_name}/{f.name}"
+        f"/review/imgs/{run_name}/cropped/{class_name}/{f.name}"
         for f in review_dir.iterdir()
         if f.suffix.lower() in {".png", ".jpg", ".jpeg"}
     ])
@@ -500,9 +499,8 @@ class DeleteBody(BaseModel):
 
 
 @app.post("/review/delete")
-def review_delete(body: DeleteBody):
-    s = ps.load()
-    base = RUNS_DIR / s.run_name / "cropped"
+def review_delete(body: DeleteBody, x_run: str = Header(None)):
+    base = RUNS_DIR / _run(x_run) / "cropped"
     deleted = 0
     for raw in body.paths:
         parts = Path(raw).parts  # /review/imgs/<run>/<class>/<file>
@@ -522,12 +520,10 @@ class RejectClassBody(BaseModel):
 
 
 @app.post("/review/class/reject")
-def review_class_reject(body: RejectClassBody):
-    s = ps.load()
-    if not s.run_name:
-        raise HTTPException(status_code=400, detail="No active run")
-    class_dir = _safe_child(str(RUNS_DIR / s.run_name / "cropped" / body.class_name),
-                            RUNS_DIR / s.run_name / "cropped")
+def review_class_reject(body: RejectClassBody, x_run: str = Header(None)):
+    run_name = _run(x_run)
+    class_dir = _safe_child(str(RUNS_DIR / run_name / "cropped" / body.class_name),
+                            RUNS_DIR / run_name / "cropped")
     if not class_dir.exists():
         return {"deleted": 0}
     deleted = sum(1 for f in class_dir.iterdir()
@@ -537,9 +533,9 @@ def review_class_reject(body: RejectClassBody):
 
 
 @app.post("/review/approve")
-def review_approve(x_api_key: str = Header(None)):
+def review_approve(x_api_key: str = Header(None), x_run: str = Header(None)):
     _auth(x_api_key)
-    s = ps.load()
+    s = ps.load(_run(x_run))
     s.review_done = True
     ps.save(s)
     return {"review_done": True}
@@ -556,9 +552,10 @@ async def infer(
     file: UploadFile = File(...),
     conf: float = 0.25,
     x_api_key: str = Header(None),
+    x_run: str = Header(None),
 ):
     _auth(x_api_key)
-    s = ps.load()
+    s = ps.load(_run(x_run))
     if not s.best_weights or not Path(s.best_weights).exists():
         raise HTTPException(status_code=404, detail="No trained model found for active run")
 

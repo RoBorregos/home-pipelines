@@ -8,10 +8,11 @@ const imgAnnPlaceholder = document.getElementById("img-annotated-placeholder");
 const modelLabel  = document.getElementById("model-label");
 
 let selectedFile = null;
+const RUN = new URLSearchParams(location.search).get("run") || "";
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-fetch("/status").then(r => r.json()).then(s => {
+fetch(`/status?run=${encodeURIComponent(RUN)}`).then(r => r.json()).then(s => {
   if (s.best_weights) {
     const parts = s.best_weights.split("/");
     modelLabel.textContent = parts.slice(-4).join("/");
@@ -61,7 +62,7 @@ async function runInfer() {
   try {
     const res = await fetch(`/infer?conf=${conf}`, {
       method: "POST",
-      headers: { "x-api-key": getApiKey() },
+      headers: { "x-api-key": getApiKey(), "X-Run": RUN },
       body: form,
     });
 
