@@ -13,6 +13,16 @@ import os
 import sys
 from pathlib import Path
 
+# Avoid CPU thread oversubscription. The dataloader spawns several worker processes;
+# if each one also lets OpenCV/OMP/BLAS open one thread per core, the total far exceeds
+# the physical cores, the CPU thrashes on context-switching, and the GPU starves waiting
+# for batches. Capping these to 1 thread keeps each worker lean so data prep keeps up.
+# Must be set before numpy/torch/cv2 initialise their thread pools (i.e. at import time),
+# so this only fully applies when train.py is the process entry point (the subprocess path).
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +38,14 @@ def run(
 ) -> str:
     """Returns path to best weights file."""
     from ultralytics import YOLO
+
+    # Keep OpenCV single-threaded per process. Dataloader workers fork from here and
+    # inherit this, so each stays at 1 cv2 thread instead of grabbing every core.
+    try:
+        import cv2
+        cv2.setNumThreads(0)
+    except Exception:
+        pass
 
     data_yaml = Path(data_yaml)
     if not data_yaml.exists():
