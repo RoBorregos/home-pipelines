@@ -43,7 +43,8 @@ from unsloth import FastLanguageModel
 import torch
 max_seq_length = 1024 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
-load_in_4bit = True # Use 4bit quantization to reduce memory usage. Can be False.
+load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6, use 16bit LoRA (~56GB VRAM for 27B)
+load_in_16bit = True
 
 # 4bit pre quantized models we support for 4x faster downloading + no OOMs.
 fourbit_models = [
@@ -65,10 +66,11 @@ fourbit_models = [
 ] # More models at https://huggingface.co/unsloth
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/Qwen3-32B-unsloth-bnb-4bit", # or choose "unsloth/Llama-3.2-1B-Instruct"
+    model_name = "Qwen/Qwen3.6-27B", # or choose "unsloth/Llama-3.2-1B-Instruct"
     max_seq_length = max_seq_length,
     dtype = dtype,
     load_in_4bit = load_in_4bit,
+    load_in_16bit = load_in_16bit,
     # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
 )
 
@@ -106,17 +108,11 @@ I'm great thanks!<|eot_id|>
 We use our `get_chat_template` function to get the correct chat template. We support `zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, phi3, llama3` and more.
 """
 
-from unsloth.chat_templates import get_chat_template
-
-tokenizer = get_chat_template(
-    tokenizer,
-    chat_template = "qwen25",
-    # chat_template = "llama-3.1",
-)
-
+# Qwen3.6 ships its own chat template, so no get_chat_template. Thinking is disabled so the model
+# answers directly with the command list, same as the robot calls it.
 def formatting_prompts_func(examples):
     convos = examples["conversations"]
-    texts = [tokenizer.apply_chat_template(convo, tokenize = False, add_generation_prompt = False) for convo in convos]
+    texts = [tokenizer.apply_chat_template(convo, tokenize = False, add_generation_prompt = False, enable_thinking = False) for convo in convos]
     return { "text" : texts, }
 pass
 
@@ -127,9 +123,8 @@ def get_base_msgs():
     return [
         {
             "role": "system",
-                    "content": """You are a command interpreter for a robot. Your task is to interpret the user's command and convert it into a structured format that the robot can understand."""
-                    "the format is a list of commands, each with an action, complement, and characteristic. "
-                    "The action is the main verb of the command, the complement is an object or location related to the action, and the characteristic is optional additional information about the action.",
+            # Must match the system prompt of GenerateCommandList in home2 task_manager/task_manager/utils/baml_src/robot_commands.baml
+            "content": "You are a command interpreter for a robot. Your task is to interpret the user's command and convert it into a structured format that the robot can understand.",
         },
     ]
 
@@ -308,30 +303,19 @@ Let's run the model! You can change the instruction and input - leave the output
 We use `min_p = 0.1` and `temperature = 1.5`. Read this [Tweet](https://x.com/menhguin/status/1826132708508213629) for more information on why.
 """
 
-from unsloth.chat_templates import get_chat_template
-
-q = get_chat_template(
-    tokenizer,
-    chat_template = "llama-3.1",
-)
 FastLanguageModel.for_inference(model) # Enable native 2x faster inference
 
-messages = [
-        {
-      "content": "You are a service robot for domestic applications. You were developed by RoBorregos team from Tec de Monterrey, from Mexico. You are given general purpose tasks in the form of natural language inside a house environment. You have in your architecture the modules of: navigation, manipulation, person recognition, object detection and human-robot interaction. Your job is to understand the task and divide it to actions proper to your modules, considering a logical flow of the actions. You can ask for clarification if the task is not clear enough. Try to abstract the verbs as much as possible. Divide each action with a semicolon. The actions should be in the form of: 'do x; do y; do z'. For example, for the prompt 'Locate a dish in the kitchen then get it and give it to Angel in the living room', the actions would be: 'go, kitchen; find, dish; grab, dish; go, living room; find, Angel; approach, Angel; give, dish.'. Another example is, for the prompt: 'Tell me what is the biggest object on the tv stand' and its actions are 'remember, location; go, tv stand; identify, biggest + object; go, past location; interact, biggest object information.'. Don't add single quotes",
-      "role": "system"
-    },
-    { "content": "Go to the kitchen, grab cookies and place them in the living room", "role": "user" },
-]
+messages = get_messages(get_base_msgs(), "take a pear from the dinner table and deliver it to Charlie in the living room")
 inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    enable_thinking = False,
     return_tensors = "pt",
 ).to("cuda")
 
-outputs = model.generate(input_ids = inputs, max_new_tokens = 64, use_cache = True,
-                         temperature = 1.5, min_p = 0.1)
+outputs = model.generate(input_ids = inputs, max_new_tokens = 256, use_cache = True,
+                         temperature = 0.1)
 tokenizer.batch_decode(outputs)
 
 """ You can also use a `TextStreamer` for continuous inference - so you can see the generation token by token, instead of waiting the whole time!"""
