@@ -123,8 +123,9 @@ def get_base_msgs():
     return [
         {
             "role": "system",
-            # Must match the system prompt of GenerateCommandList in home2 task_manager/task_manager/utils/baml_src/robot_commands.baml
-            "content": "You are a command interpreter for a robot. Your task is to interpret the user's command and convert it into a structured format that the robot can understand.",
+                    "content": """You are a command interpreter for a robot. Your task is to interpret the user's command and convert it into a structured format that the robot can understand."""
+                    "the format is a list of commands, each with an action, complement, and characteristic. "
+                    "The action is the main verb of the command, the complement is an object or location related to the action, and the characteristic is optional additional information about the action.",
         },
     ]
 
@@ -305,7 +306,13 @@ We use `min_p = 0.1` and `temperature = 1.5`. Read this [Tweet](https://x.com/me
 
 FastLanguageModel.for_inference(model) # Enable native 2x faster inference
 
-messages = get_messages(get_base_msgs(), "take a pear from the dinner table and deliver it to Charlie in the living room")
+messages = [
+        {
+      "content": "You are a service robot for domestic applications. You were developed by RoBorregos team from Tec de Monterrey, from Mexico. You are given general purpose tasks in the form of natural language inside a house environment. You have in your architecture the modules of: navigation, manipulation, person recognition, object detection and human-robot interaction. Your job is to understand the task and divide it to actions proper to your modules, considering a logical flow of the actions. You can ask for clarification if the task is not clear enough. Try to abstract the verbs as much as possible. Divide each action with a semicolon. The actions should be in the form of: 'do x; do y; do z'. For example, for the prompt 'Locate a dish in the kitchen then get it and give it to Angel in the living room', the actions would be: 'go, kitchen; find, dish; grab, dish; go, living room; find, Angel; approach, Angel; give, dish.'. Another example is, for the prompt: 'Tell me what is the biggest object on the tv stand' and its actions are 'remember, location; go, tv stand; identify, biggest + object; go, past location; interact, biggest object information.'. Don't add single quotes",
+      "role": "system"
+    },
+    { "content": "Go to the kitchen, grab cookies and place them in the living room", "role": "user" },
+]
 inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
