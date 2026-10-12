@@ -1,10 +1,11 @@
 ## Rooms
 | Name  | 
 | ------------ |  
-| bedroom | 
-| kitchen | 
-| office | 
 | living room | 
-| bathroom | 
-
-
+| kitchen | 
+| bedroom | 
+| laundry | 
+| entrance | 
+| exit | 
+| start area | 
+| inspection point | 
