@@ -73,6 +73,8 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_16bit = load_in_16bit,
     # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
 )
+# Qwen3.6 is multimodal, so Unsloth returns a processor. We only need its text tokenizer.
+tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
 
 """We now add LoRA adapters so we only need to update 1 to 10% of all parameters!"""
 
@@ -184,7 +186,7 @@ def load_custom_dataset(file_path):
 
 
 # dataset = load_dataset("mlabonne/FineTome-100k", split = "train")
-dataset = load_custom_dataset('nlp-function-dataset.json')
+dataset = load_custom_dataset('../../command_generator/dataset.json')
 print(dataset)
 print(dataset['conversations'])
 
@@ -318,10 +320,11 @@ inputs = tokenizer.apply_chat_template(
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
     enable_thinking = False,
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
-outputs = model.generate(input_ids = inputs, max_new_tokens = 256, use_cache = True,
+outputs = model.generate(**inputs, max_new_tokens = 256, use_cache = True,
                          temperature = 0.1)
 tokenizer.batch_decode(outputs)
 
@@ -336,12 +339,13 @@ inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
 from transformers import TextStreamer
 text_streamer = TextStreamer(tokenizer, skip_prompt = True)
-_ = model.generate(input_ids = inputs, streamer = text_streamer, max_new_tokens = 128,
+_ = model.generate(**inputs, streamer = text_streamer, max_new_tokens = 128,
                    use_cache = True, temperature = 1.5, min_p = 0.1)
 
 """<a name="Save"></a>
@@ -375,12 +379,13 @@ inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
 from transformers import TextStreamer
 text_streamer = TextStreamer(tokenizer, skip_prompt = True)
-_ = model.generate(input_ids = inputs, streamer = text_streamer, max_new_tokens = 128,
+_ = model.generate(**inputs, streamer = text_streamer, max_new_tokens = 128,
                    use_cache = True, temperature = 1.5, min_p = 0.1)
 
 """You can also use Hugging Face's `AutoModelForPeftCausalLM`. Only use this if you do not have `unsloth` installed. It can be hopelessly slow, since `4bit` model downloading is not supported, and Unsloth's **inference is 2x faster**."""
