@@ -13,6 +13,18 @@ import os
 import sys
 from pathlib import Path
 
+# Avoid CPU thread oversubscription. The dataloader spawns several worker processes;
+# if each one open one thread per core, the total far exceeds the physical cores.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+
+import cv2  # noqa: E402
+from ultralytics import YOLO  # noqa: E402
+
+# Keep OpenCV single-threaded so dataloader workers inherit it
+cv2.setNumThreads(0)
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,11 +36,9 @@ def run(
     device: str = "0",
     epochs: int = 100,
     batch: int = 64,
-    model: str = "yolo11m.pt",
+    model: str = "yolo11l.pt",
 ) -> str:
     """Returns path to best weights file."""
-    from ultralytics import YOLO
-
     data_yaml = Path(data_yaml)
     if not data_yaml.exists():
         raise FileNotFoundError(f"data.yaml not found: {data_yaml}")
@@ -90,7 +100,7 @@ def run(
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s %(levelname)-8s %(message)s",
+        format="%(message)s",
         stream=sys.stdout,
         force=True,
     )

@@ -8,7 +8,6 @@ import os
 
 BASE_DIR   = Path(__file__).parent
 RUNS_DIR   = BASE_DIR / "pipeline_runs"
-STATE_FILE = BASE_DIR / "pipeline_state.json"
 
 # Stage name constants
 SEGMENT  = "segment"
@@ -53,22 +52,32 @@ class PipelineState:
         return BASE_DIR / "backgrounds"
 
 
-def load() -> PipelineState:
-    if not STATE_FILE.exists():
-        return PipelineState()
-    data = json.loads(STATE_FILE.read_text())
+def _state_file(run_name: str) -> Path:
+    return RUNS_DIR / run_name / "state.json"
+
+
+def load(run_name: str) -> PipelineState:
+    """Load a run's state from its own state.json, or a fresh default if absent."""
+    state_file = _state_file(run_name)
+    if not state_file.exists():
+        return PipelineState(run_name=run_name)
+    data = json.loads(state_file.read_text())
     fields = PipelineState.__dataclass_fields__
-    return PipelineState(**{k: v for k, v in data.items() if k in fields})
+    s = PipelineState(**{k: v for k, v in data.items() if k in fields})
+    s.run_name = run_name  # path is the source of truth for identity
+    return s
 
 
 def save(state: PipelineState) -> None:
-    tmp = STATE_FILE.with_suffix(".tmp")
+    state_file = _state_file(state.run_name)
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp = state_file.with_suffix(".tmp")
     tmp.write_text(json.dumps(asdict(state), indent=2))
-    os.replace(tmp, STATE_FILE)
+    os.replace(tmp, state_file)
 
 
-def transition(stage_running: str, **kwargs) -> PipelineState:
-    s = load()
+def transition(run_name: str, stage_running: str, **kwargs) -> PipelineState:
+    s = load(run_name)
     s.running = stage_running
     s.stage_started_at = datetime.now().isoformat()
     s.error = ""
