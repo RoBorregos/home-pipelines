@@ -11,9 +11,7 @@ from state import SEGMENT, GENERATE, TRAIN, BASE_DIR
 
 
 # ── Per-run, thread-routed logging ──────────────────────────────────────────────
-# Each stage runs in its own thread. A single handler on the "stages" logger routes
-# every record to the log file registered for the thread that emitted it, so
-# concurrent runs never clobber each other's files (no handlers.clear() needed).
+# Each stage runs in its own thread.
 _RUN_LOG: dict[int, Path] = {}
 
 
