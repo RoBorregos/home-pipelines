@@ -34,7 +34,7 @@ def run(
     device: str = "0",
     epochs: int = 100,
     batch: int = 64,
-    model: str = "yolo11m.pt",
+    model: str = "yolo11l.pt",
 ) -> str:
     """Returns path to best weights file."""
     from ultralytics import YOLO
