@@ -1,8 +1,15 @@
 # Home Pipelines
 
-## Description
+Training and data pipelines for the RoBorregos RoboCup@Home team. These tools prepare the vision models and language models used by the robot for each competition.
 
-Jupyter notebooks pipelines for the @home competition.
+## Pipelines
+
+| Pipeline | Location | Purpose |
+| -------- | -------- | ------- |
+| Object detector | [`vision/object_detector`](vision/object_detector/readme.md) | Builds a custom YOLO detector from object videos |
+| Command generator | [`hri/command_interpreter/command_generator`](hri/command_interpreter/command_generator) | Generates and paraphrases GPSR and EGPSR command datasets |
+| LLM fine-tuning | [`hri/command_interpreter/training_pipeline`](hri/command_interpreter/training_pipeline) | Fine-tunes the command interpretation models with Unsloth |
+| Object lists | [`hri/command_interpreter/objects`](hri/command_interpreter/objects/README.md) | Generates object reference documents from images |
 
 ## Development team
 
@@ -14,4 +21,4 @@ Jupyter notebooks pipelines for the @home competition.
 
 ## License
 
-License used.
+This project is licensed under the [MIT License](LICENSE).
