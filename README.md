@@ -11,26 +11,6 @@ Training and data pipelines for the RoBorregos RoboCup@Home team. These tools pr
 | LLM fine-tuning | [`hri/command_interpreter/training_pipeline`](hri/command_interpreter/training_pipeline) | Fine-tunes the command interpretation models with Unsloth |
 | Object lists | [`hri/command_interpreter/objects`](hri/command_interpreter/objects/README.md) | Generates object reference documents from images |
 
-### Object detector
-
-A FastAPI service with a web UI that runs each step of the workflow:
-
-1. Extract frames from videos uploaded to Google Drive.
-2. Segment objects with Grounding DINO and SAM 3.
-3. Review the segmented images.
-4. Generate a synthetic dataset.
-5. Train and test a YOLO model.
-
-Start the service with Docker. It requires an NVIDIA GPU:
-
-```bash
-cd vision/object_detector
-export PIPELINE_API_KEY=<your-key>
-docker compose -f pc.yaml up --build pipeline-service
-```
-
-The UI runs at `http://localhost:8000`. See the [pipeline documentation](vision/object_detector/readme.md) for the architecture and remote access setup.
-
 ## Development team
 
 | Name               | Email                                                           | Github                                   | Role                      |
