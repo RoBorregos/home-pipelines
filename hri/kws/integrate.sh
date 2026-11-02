@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Copies freshly trained <word>.onnx files from .data/models/ into the
-# hri/packages/speech/assets/oww/ directory that kws_oww.py loads at runtime.
+# assets/oww/ directory that kws_oww.py loads at runtime.
 #
 # Existing .onnx assets are backed up to <word>.onnx.bak before being
 # overwritten, so the user can roll back with a single mv if the new models
-# misbehave. The .tflite files are left alone — kws_oww.py only loads *.onnx
-# (see hri/packages/speech/scripts/kws_oww.py:66).
+# misbehave. The .tflite files are left alone — kws_oww.py only loads *.onnx.
 #
 # Fails loudly if any of the four expected models is missing, so a partial
 # training run never silently overwrites good models.
@@ -14,7 +13,8 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_DIR="$HERE/.data/models"
-ASSETS_DIR="$(cd "$HERE/../../assets/oww" && pwd)"
+ASSETS_DIR="${OWW_ASSETS_DIR:?set to <home2>/hri/packages/speech/assets/oww}"
+[[ -d "$ASSETS_DIR" ]] || { echo "ERROR: $ASSETS_DIR does not exist" >&2; exit 1; }
 
 WORDS=(frida yes no stop)
 
@@ -41,7 +41,7 @@ echo "[integrate] target: $ASSETS_DIR"
 for word in "${WORDS[@]}"; do
   src="$MODELS_DIR/$word.onnx"
   dst="$ASSETS_DIR/$word.onnx"
-  if [[ -f "$dst" ]]; then
+  if [[ -f "$dst" && ! -f "$dst.bak" ]]; then
     cp -f "$dst" "$dst.bak"
     echo "[integrate] backed up $word.onnx -> $word.onnx.bak"
   fi

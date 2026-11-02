@@ -1,3 +1,7 @@
+# Vendored from upstream openWakeWord's openwakeword/train.py
+# (https://github.com/dscripka/openWakeWord, v0.6.0, Apache-2.0).
+# Local changes: Piper generate_samples() noise/length params, num_workers
+# platform handling, and an argparse default fix.
 import torch
 from torch import optim, nn
 import torchinfo
@@ -869,6 +873,11 @@ if __name__ == "__main__":
         )
 
     if args.generate_clips is True:
+        # noise_scales/noise_scale_ws/length_scales below (used at all four
+        # generate_samples call sites in this function) are narrower than
+        # upstream's defaults (0.98/0.98/[0.75,1.0,1.25]) — tightened to cut
+        # down on unintelligible synthetic samples after early runs showed
+        # recall collapsing to 0 at every threshold.
         # Generate positive clips for training
         logging.info("#" * 50 + "\nGenerating positive clips for training\n" + "#" * 50)
         if not os.path.exists(positive_train_output_dir):
@@ -922,7 +931,7 @@ if __name__ == "__main__":
             os.mkdir(negative_train_output_dir)
         n_current_samples = len(os.listdir(negative_train_output_dir))
         if n_current_samples <= 0.95 * config["n_samples"]:
-            adversarial_texts = config["custom_negative_phrases"]
+            adversarial_texts = list(config["custom_negative_phrases"])
             for target_phrase in config["target_phrase"]:
                 adversarial_texts.extend(
                     generate_adversarial_texts(
@@ -957,7 +966,7 @@ if __name__ == "__main__":
             os.mkdir(negative_test_output_dir)
         n_current_samples = len(os.listdir(negative_test_output_dir))
         if n_current_samples <= 0.95 * config["n_samples_val"]:
-            adversarial_texts = config["custom_negative_phrases"]
+            adversarial_texts = list(config["custom_negative_phrases"])
             for target_phrase in config["target_phrase"]:
                 adversarial_texts.extend(
                     generate_adversarial_texts(
@@ -1176,13 +1185,15 @@ if __name__ == "__main__":
             def __iter__(self):
                 return self.generator
 
-        # num_workers=0: IterableDataset + lambdas can't be pickled for
-        # multiprocessing on macOS (spawn start method). Single-threaded
-        # loading is fast enough for this dataset size.
+        # num_workers=0 only on macOS: IterableDataset + lambdas can't be
+        # pickled for multiprocessing there (spawn start method). Linux's
+        # fork start method shares memory instead of pickling, so workers
+        # are safe there and worthwhile on a CUDA box.
+        num_workers = 0 if sys.platform == "darwin" else 4
         X_train = torch.utils.data.DataLoader(
             IterDataset(batch_generator),
             batch_size=None,
-            num_workers=0,
+            num_workers=num_workers,
         )
 
         X_val_fp = np.load(config["false_positive_validation_data_path"])

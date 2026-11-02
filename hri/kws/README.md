@@ -2,15 +2,17 @@
 
 Self-contained training pipeline for the four wake words used by the HRI
 speech stack: `frida`, `yes`, `no`, `stop`. Produces the `*.onnx` files that
-`hri/packages/speech/scripts/kws_oww.py` loads at runtime from
-`hri/packages/speech/assets/oww/`.
+`kws_oww.py` (in the `home2` repo, at
+`hri/packages/speech/scripts/kws_oww.py`) loads at runtime from
+`<home2>/hri/packages/speech/assets/oww/`.
 
 ## One-command quickstart
 
 From the repo root, on a fresh clone (ideally a CUDA-capable Linux box):
 
 ```bash
-./hri/packages/speech/training/oww/run.sh
+export OWW_ASSETS_DIR=<home2>/hri/packages/speech/assets/oww
+./hri/kws/run.sh
 ```
 
 That runs:
@@ -21,7 +23,7 @@ That runs:
 2. `train_all.sh` — runs `train.py` once per wake word using the YAML configs
    in `configs/`, producing `.data/models/<word>.onnx`.
 3. `integrate.sh` — copies the four trained `.onnx` files into
-   `hri/packages/speech/assets/oww/`, backing up the existing files to
+   `$OWW_ASSETS_DIR`, backing up the existing files to
    `<word>.onnx.bak` first.
 
 Re-running after a crash is cheap: every step is idempotent, and `train.py`
@@ -34,24 +36,25 @@ disk.
   `/Desktop/home2/venv` runs Python 3.13, which is too new for several
   training deps, so `setup.sh` builds its own venv here under `.venv/`.
 - `git` for cloning `piper-sample-generator`.
-- ~10 GB of free disk under this directory for the datasets (see below).
+- ~10 GB of free disk under this directory: ~4.1 GB of datasets (see below),
+  plus room for the venv, `.third_party/`, and per-word training outputs.
 - Strongly recommended: an NVIDIA GPU. On macOS or another CPU-only host the
   pipeline still runs but takes many hours per word.
 
 ## What gets downloaded
 
-All of these land under `hri/packages/speech/training/oww/.data/` (ignored
-by git — see `.gitignore` below if you want to add one):
+All of these land under `hri/kws/.data/` (ignored by git — see `.gitignore`
+below if you want to add one):
 
-| Asset                                    | Size     | Used as                         |
-| ---------------------------------------- | -------- | ------------------------------- |
-| `mit_rirs/`                              | ~0.05 GB | Room-impulse-response augment.  |
-| `audioset_16k/`                          | ~3 GB    | Background music/speech/noise.  |
-| `negative_features_large.npy` (ACAV100M) | ~2 GB    | Adversarial negative features.  |
-| `validation_set_features.npy`            | ~0.3 GB  | False-positive validation set.  |
-| OWW feature extractors (mel + embedding) | <50 MB   | Cached by openwakeword itself.  |
+| Asset                                                       | Size     | Used as                         |
+| ------------------------------------------------------------ | -------- | ------------------------------- |
+| `mit_rirs/`                                                  | ~0.05 GB | Room-impulse-response augment.  |
+| `audioset/bal_train_09.parquet` + extracted `audioset_16k/`  | ~1.7 GB  | Background music/speech/noise.  |
+| `negative_features_large.npy` (ACAV100M)                     | ~2 GB    | Adversarial negative features.  |
+| `validation_set_features.npy`                                | ~0.3 GB  | False-positive validation set.  |
+| OWW feature extractors (mel + embedding)                     | <50 MB   | Cached by openwakeword itself.  |
 
-Total: ~5.5 GB. We rely on AudioSet alone for background audio rather than
+Total: ~4.1 GB. We rely on AudioSet alone for background audio rather than
 adding FMA — the `rudraml/fma` HuggingFace loader requires `trust_remote_code`
 and can't be streamed, and AudioSet already covers music, speech, and noise.
 `download_data.py` prints an estimate and prompts before downloading (the
@@ -60,8 +63,8 @@ prompt is auto-accepted when invoked from `run.sh`).
 ## Iterating on a single word
 
 ```bash
-source hri/packages/speech/training/oww/.venv/bin/activate
-cd hri/packages/speech/training/oww
+source hri/kws/.venv/bin/activate
+cd hri/kws
 python train.py \
   --training_config configs/frida.yaml \
   --generate_clips --augment_clips --train_model
@@ -74,8 +77,8 @@ synthetic audio, delete the per-word output directory under `.data/models/`.
 ### Per-word tuning notes
 
 - **`no`** — the trickiest word. It collides with `know`, `now`, `note`,
-  `november`, etc. Its config starts at `max_negative_weight: 3000` (double
-  the other words) and explicitly lists those collisions as negative phrases.
+  `november`, etc. Its config uses `max_negative_weight: 800` (highest of
+  the four words) and explicitly lists those collisions as negative phrases.
 - **`yes`** — penalize `yesterday`, `yet`, `yellow` so substring hits don't
   fire the wake word.
 - **`stop`** — penalize `stopped`, `stopping`, `shop`, `top`, `sop`.
@@ -92,20 +95,20 @@ After `integrate.sh` copies the new `.onnx` files into place:
    from openwakeword.model import Model
    m = Model(
        wakeword_models=[
-           "hri/packages/speech/assets/oww/frida.onnx",
-           "hri/packages/speech/assets/oww/yes.onnx",
-           "hri/packages/speech/assets/oww/no.onnx",
-           "hri/packages/speech/assets/oww/stop.onnx",
+           "<home2>/hri/packages/speech/assets/oww/frida.onnx",
+           "<home2>/hri/packages/speech/assets/oww/yes.onnx",
+           "<home2>/hri/packages/speech/assets/oww/no.onnx",
+           "<home2>/hri/packages/speech/assets/oww/stop.onnx",
        ],
        inference_framework="onnx",
    )
    print(sorted(m.models.keys()))  # -> ['frida', 'no', 'stop', 'yes']
    ```
-   This mirrors exactly what `kws_oww.py` does at startup
-   (`hri/packages/speech/scripts/kws_oww.py:68`).
+   This mirrors exactly what `kws_oww.py` does at startup, in the `home2`
+   repo.
 
 2. **Offline smoke test** — feed
-   `hri/packages/speech/assets/listening_chime.wav` plus a couple of
+   `<home2>/hri/packages/speech/assets/listening_chime.wav` plus a couple of
    Piper-generated "frida" WAVs through `model.predict()` and print per-key
    scores. Expect ≥0.5 on the true word, ≤0.1 on the chime.
 
@@ -118,19 +121,20 @@ After `integrate.sh` copies the new `.onnx` files into place:
 ## Rolling back
 
 `integrate.sh` leaves the previous models at
-`hri/packages/speech/assets/oww/<word>.onnx.bak`. To revert:
+`$OWW_ASSETS_DIR/<word>.onnx.bak`. To revert:
 
 ```bash
-cd hri/packages/speech/assets/oww
+cd <home2>/hri/packages/speech/assets/oww
 for w in frida yes no stop; do mv "$w.onnx.bak" "$w.onnx"; done
 ```
 
 ## Directory layout
 
 ```
-hri/packages/speech/training/oww/
+hri/kws/
 ├── README.md          # this file
-├── train.py           # openWakeWord training driver (moved from repo root)
+├── train.py           # openWakeWord training driver, vendored from upstream
+│                       # openwakeword's train.py (Apache-2.0)
 ├── requirements.txt   # pinned training deps
 ├── setup.sh           # venv + deps + piper-sample-generator + datasets
 ├── download_data.py   # idempotent dataset downloader (invoked by setup.sh)

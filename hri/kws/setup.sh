@@ -25,7 +25,7 @@ PIPER_DIR="$THIRD_PARTY_DIR/piper-sample-generator"
 
 # ---- 1. Pick a supported Python interpreter --------------------------------
 PYTHON_BIN=""
-for candidate in python3.12 python3.11 python3.10; do
+for candidate in python3.11 python3.10; do
   if command -v "$candidate" >/dev/null 2>&1; then
     PYTHON_BIN="$candidate"
     break
@@ -33,8 +33,8 @@ for candidate in python3.12 python3.11 python3.10; do
 done
 
 if [[ -z "$PYTHON_BIN" ]]; then
-  echo "ERROR: need python3.10, 3.11, or 3.12 on PATH (found none)." >&2
-  echo "       Python 3.13 is too new for several training dependencies." >&2
+  echo "ERROR: need python3.10 or python3.11 on PATH (found none)." >&2
+  echo "       Python 3.12+ is too new for several training dependencies." >&2
   echo "       Install one of the supported versions and re-run setup.sh." >&2
   exit 1
 fi
@@ -96,8 +96,11 @@ pip install -r "$HERE/requirements.txt"
 # a one-file shim into the venv's site-packages that satisfies the
 #   from piper_phonemize import phonemize_espeak
 # import used by piper-sample-generator/generate_samples.py.
-SITE_PACKAGES="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
-cat > "$SITE_PACKAGES/piper_phonemize.py" << 'SHIM_EOF'
+if python -c 'import piper_phonemize' >/dev/null 2>&1; then
+  echo "[setup] real piper-phonemize wheel already present, skipping shim"
+else
+  SITE_PACKAGES="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+  cat > "$SITE_PACKAGES/piper_phonemize.py" << 'SHIM_EOF'
 """piper-phonemize shim: delegates to piper-tts's bundled espeakbridge."""
 from piper.phonemize_espeak import EspeakPhonemizer as _Pep
 
@@ -109,7 +112,8 @@ def phonemize_espeak(text, voice):
         _phonemizer = _Pep()
     return _phonemizer.phonemize(voice, text)
 SHIM_EOF
-echo "[setup] installed piper_phonemize compatibility shim at $SITE_PACKAGES/piper_phonemize.py"
+  echo "[setup] installed piper_phonemize compatibility shim at $SITE_PACKAGES/piper_phonemize.py"
+fi
 
 # onnxruntime flavor depends on whether we have CUDA. onnxruntime and
 # onnxruntime-gpu conflict if both are installed, so we handle them here

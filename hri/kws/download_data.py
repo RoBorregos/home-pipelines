@@ -29,7 +29,9 @@ DATA_DIR = HERE / ".data"
 # Approximate disk footprint for the summary (printed before anything runs).
 APPROX_SIZES_GB = {
     "mit_rirs": 0.05,
-    "audioset_16k": 3.0,
+    # ~0.68 GB parquet shard (retained under .data/audioset/) + ~1 GB of
+    # extracted 16 kHz WAVs.
+    "audioset_16k": 1.7,
     "negative_features_large.npy": 2.0,
     "validation_set_features.npy": 0.3,
     "oww_features": 0.05,
@@ -44,12 +46,29 @@ def _nonempty_dir(p: Path) -> bool:
     return False
 
 
+_DOWNLOAD_TIMEOUT_S = 30
+_DOWNLOAD_MAX_RETRIES = 5
+
+
 def _download_file(url: str, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = out_path.with_suffix(out_path.suffix + ".part")
     print(f"  fetching {url}")
-    with urllib.request.urlopen(url) as response, open(tmp_path, "wb") as fh:
-        shutil.copyfileobj(response, fh)
+    for attempt in range(1, _DOWNLOAD_MAX_RETRIES + 1):
+        resume_from = tmp_path.stat().st_size if tmp_path.exists() else 0
+        req = urllib.request.Request(url)
+        if resume_from:
+            req.add_header("Range", f"bytes={resume_from}-")
+        try:
+            with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT_S) as response:
+                mode = "ab" if resume_from and response.status == 206 else "wb"
+                with open(tmp_path, mode) as fh:
+                    shutil.copyfileobj(response, fh)
+            break
+        except (OSError, TimeoutError) as exc:
+            if attempt == _DOWNLOAD_MAX_RETRIES:
+                raise
+            print(f"  download attempt {attempt} failed ({exc}), retrying...")
     tmp_path.rename(out_path)
 
 
@@ -121,47 +140,59 @@ def fetch_audioset() -> None:
         _download_file(url, parquet_path)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    table = pq.read_table(parquet_path)
     # Figure out which column holds the audio blob. agkphysics/AudioSet stores
     # it as a struct column named "audio" with "bytes" + "path" fields.
-    if "audio" not in table.column_names:
+    parquet_file = pq.ParquetFile(parquet_path)
+    if "audio" not in parquet_file.schema_arrow.names:
         raise RuntimeError(
-            f"Expected an 'audio' column in {parquet_path}, got {table.column_names}"
+            f"Expected an 'audio' column in {parquet_path}, got "
+            f"{parquet_file.schema_arrow.names}"
         )
-    audio_col = table.column("audio").to_pylist()
 
     target_sr = 16000
     written = 0
-    for i, entry in enumerate(tqdm(audio_col, desc="audioset_16k")):
-        if entry is None:
-            continue
-        audio_bytes = entry.get("bytes") if isinstance(entry, dict) else None
-        path = (
-            entry.get("path") if isinstance(entry, dict) else None
-        ) or f"clip_{i:05d}"
-        if not audio_bytes:
-            continue
-        try:
-            data, sr = sf.read(io.BytesIO(audio_bytes), always_2d=False)
-        except Exception:
-            continue
-        if data.ndim > 1:
-            data = data.mean(axis=1)
-        if sr != target_sr:
-            n_out = int(round(len(data) * target_sr / sr))
-            if n_out <= 0:
+    i = 0
+    # Stream row-group batches instead of pq.read_table(...).to_pylist(), which
+    # would materialize the whole ~680 MB shard's decoded audio blobs at once.
+    for batch in tqdm(
+        parquet_file.iter_batches(columns=["audio"], batch_size=256),
+        desc="audioset_16k",
+    ):
+        for entry in batch.column("audio").to_pylist():
+            if entry is None:
+                i += 1
                 continue
-            data = scipy.signal.resample(data, n_out)
-        name = os.path.basename(path)
-        name = os.path.splitext(name)[0] + ".wav"
-        if not name or name == ".wav":
-            name = f"clip_{i:05d}.wav"
-        scipy.io.wavfile.write(
-            out_dir / name,
-            target_sr,
-            (np.clip(data, -1.0, 1.0) * 32767).astype(np.int16),
-        )
-        written += 1
+            audio_bytes = entry.get("bytes") if isinstance(entry, dict) else None
+            path = (
+                entry.get("path") if isinstance(entry, dict) else None
+            ) or f"clip_{i:05d}"
+            if not audio_bytes:
+                i += 1
+                continue
+            try:
+                data, sr = sf.read(io.BytesIO(audio_bytes), always_2d=False)
+            except Exception:
+                i += 1
+                continue
+            if data.ndim > 1:
+                data = data.mean(axis=1)
+            if sr != target_sr:
+                n_out = int(round(len(data) * target_sr / sr))
+                if n_out <= 0:
+                    i += 1
+                    continue
+                data = scipy.signal.resample(data, n_out)
+            name = os.path.basename(path)
+            name = os.path.splitext(name)[0] + ".wav"
+            if not name or name == ".wav":
+                name = f"clip_{i:05d}.wav"
+            scipy.io.wavfile.write(
+                out_dir / name,
+                target_sr,
+                (np.clip(data, -1.0, 1.0) * 32767).astype(np.int16),
+            )
+            written += 1
+            i += 1
 
     if written == 0:
         raise RuntimeError(
@@ -201,12 +232,11 @@ def fetch_oww_feature_extractors() -> None:
 
     openwakeword ships a helper that downloads these on first use; calling it
     here keeps training runs self-contained and avoids a surprise download
-    the first time train.py imports the package.
+    the first time train.py imports the package. download_models() checks
+    per-file existence in the openwakeword package directory itself (not
+    under .data/), so it's already a no-op on repeat calls — we don't need
+    our own marker file to track that.
     """
-    marker = DATA_DIR / "oww_features" / ".downloaded"
-    if marker.exists():
-        print("[skip] openwakeword feature extractors (already cached)")
-        return
     print("[get ] openwakeword feature extractors (mel + embedding)")
     try:
         import openwakeword.utils as utils
@@ -215,9 +245,6 @@ def fetch_oww_feature_extractors() -> None:
     except Exception as exc:  # noqa: BLE001
         print(f"  WARNING: openwakeword.download_models() failed: {exc}")
         print("  training will attempt to fetch them itself on first run.")
-        return
-    marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.touch()
 
 
 # --- Driver ------------------------------------------------------------------
@@ -240,7 +267,13 @@ def _pending() -> list[str]:
             if not (p.exists() and p.stat().st_size > 0):
                 pending.append(name)
         elif name == "oww_features":
-            if not (DATA_DIR / "oww_features" / ".downloaded").exists():
+            try:
+                import openwakeword
+
+                models_dir = Path(openwakeword.__file__).resolve().parent / "resources" / "models"
+                if not _nonempty_dir(models_dir):
+                    pending.append(name)
+            except ImportError:
                 pending.append(name)
         else:
             if not _nonempty_dir(p):
@@ -260,7 +293,14 @@ def _print_summary() -> None:
     print(f"Estimated total: ~{total:.1f} GB")
     print(f"Target directory: {DATA_DIR}")
     if os.environ.get("OWW_DOWNLOAD_YES") != "1":
-        reply = input("Proceed? [y/N] ").strip().lower()
+        try:
+            reply = input("Proceed? [y/N] ").strip().lower()
+        except EOFError:
+            print(
+                "\nNo TTY to confirm on. Re-run with OWW_DOWNLOAD_YES=1 to "
+                "download non-interactively."
+            )
+            sys.exit(1)
         if reply not in ("y", "yes"):
             print("Aborted.")
             sys.exit(1)

@@ -10,7 +10,7 @@ n_samples: 5000
 n_samples_val: 500
 tts_batch_size: 50
 # "no" collides hard with many common English words; we explicitly penalize
-# them here and raise max_negative_weight below to match.
+# them here and tune max_negative_weight below to match.
 custom_negative_phrases:
   - "know"
   - "now"

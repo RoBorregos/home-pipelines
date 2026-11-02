@@ -7,7 +7,7 @@
 #
 # Pipeline:
 #   1. setup.sh      — create venv, install deps, clone piper-sample-generator,
-#                      download MIT IR / FMA / AudioSet / ACAV100M / dinner-party eval.
+#                      download MIT IR / AudioSet / ACAV100M / validation features.
 #   2. train_all.sh  — train frida / yes / no / stop via train.py.
 #   3. integrate.sh  — copy .onnx outputs into the speech package assets dir
 #                      (backing up the existing files to *.onnx.bak first).
@@ -21,6 +21,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Non-interactive so unattended runs on a remote CUDA box don't block on the
 # download confirmation prompt.
 export OWW_SETUP_NONINTERACTIVE=1
+: "${OWW_ASSETS_DIR:?set to <home2>/hri/packages/speech/assets/oww}"
 
 bash "$HERE/setup.sh"
 bash "$HERE/train_all.sh"
