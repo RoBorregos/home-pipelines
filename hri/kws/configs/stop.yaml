@@ -1,0 +1,49 @@
+model_name: "stop"
+target_phrase:
+  - "stop"
+
+# Synthetic data generation (Piper)
+piper_sample_generator_path: .third_party/piper-sample-generator
+n_samples: 5000
+n_samples_val: 500
+tts_batch_size: 50
+custom_negative_phrases:
+  - "stopped"
+  - "stopping"
+  - "shop"
+  - "top"
+  - "sop"
+  - "stove"
+  - "store"
+  - "the cat sat"
+  - "please open the door"
+  - "what time is it"
+
+# Augmentation
+output_dir: .data/models
+rir_paths:
+  - .data/mit_rirs
+background_paths:
+  - .data/audioset_16k
+background_paths_duplication_rate: [1]
+augmentation_rounds: 2
+augmentation_batch_size: 16
+
+# Model
+model_type: dnn
+# Bumped from 32 -> 128 (the openWakeWord notebook default). 32 was too
+# small to cleanly discriminate short words like "yes"/"no"/"stop".
+layer_size: 128
+
+# Training
+feature_data_files:
+  ACAV100M: .data/negative_features_large.npy
+false_positive_validation_data_path: .data/validation_set_features.npy
+batch_n_per_class:
+  positive: 50
+  adversarial_negative: 50
+  ACAV100M: 1024
+steps: 20000
+# Lowered from 1500 -> 500. Previous runs overshot on negative penalty.
+max_negative_weight: 500
+target_false_positives_per_hour: 0.2
