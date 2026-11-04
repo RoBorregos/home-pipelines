@@ -1,4 +1,5 @@
 (() => {
+  const RUN = new URLSearchParams(location.search).get("run") || "";
   const PAGE_SIZE = 48;
   let currentClass = "";
   let currentPage  = 0;
@@ -43,7 +44,7 @@
   // ── Class selector ───────────────────────────────────────────────────────────
 
   async function loadClasses() {
-    const s = await fetch("/status").then(r => r.json());
+    const s = await fetch(`/status?run=${encodeURIComponent(RUN)}`).then(r => r.json());
     const imported = s.imported_classes || {};
     // Exclude repo-imported classes — they are already curated and bypass review
     classList = Object.keys(s.segmented_classes || {}).filter(
@@ -92,7 +93,7 @@
 
   async function loadPage(page) {
     if (!currentClass) return;
-    const res = await fetch(`/review/images?class_name=${encodeURIComponent(currentClass)}&page=${page}&page_size=${PAGE_SIZE}`);
+    const res = await fetch(`/review/images?run=${encodeURIComponent(RUN)}&class_name=${encodeURIComponent(currentClass)}&page=${page}&page_size=${PAGE_SIZE}`);
     const data = await res.json();
     totalImages = data.total;
     currentPage = page;
@@ -155,7 +156,7 @@
     showStatus(`Deleting ${selected.size} images…`);
     const res = await fetch("/review/delete", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Run": RUN },
       body: JSON.stringify({ paths: [...selected] }),
     });
     const data = await res.json();
@@ -179,7 +180,7 @@
     showStatus(`Deleting all images in "${currentClass}"…`);
     const res = await fetch("/review/class/reject", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Run": RUN },
       body: JSON.stringify({ class_name: currentClass }),
     });
     const data = await res.json();
@@ -200,7 +201,7 @@
       showStatus(`Publishing "${cls}" to repo…`);
       const pubRes = await fetch("/repo/publish", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+        headers: { "Content-Type": "application/json", "x-api-key": getApiKey(), "X-Run": RUN },
         body: JSON.stringify({ label: cls }),
       });
       if (!pubRes.ok) {
@@ -215,7 +216,7 @@
 
     const res = await fetch("/review/approve", {
       method: "POST",
-      headers: { "x-api-key": getApiKey() },
+      headers: { "x-api-key": getApiKey(), "X-Run": RUN },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
