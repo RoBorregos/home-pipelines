@@ -43,7 +43,7 @@ from unsloth import FastLanguageModel
 import torch
 max_seq_length = 1024 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
-load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6, use 16bit LoRA (~56GB VRAM for 27B)
+load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6, use 16bit LoRA (~22GB VRAM for 9B, ~56GB for 27B)
 load_in_16bit = True
 
 # 4bit pre quantized models we support for 4x faster downloading + no OOMs.
@@ -66,7 +66,7 @@ fourbit_models = [
 ] # More models at https://huggingface.co/unsloth
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "Qwen/Qwen3.6-27B", # or choose "unsloth/Llama-3.2-1B-Instruct"
+    model_name = "Qwen/Qwen3.5-9B", # was "Qwen/Qwen3.6-27B"
     max_seq_length = max_seq_length,
     dtype = dtype,
     load_in_4bit = load_in_4bit,
