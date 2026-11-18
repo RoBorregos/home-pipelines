@@ -39,11 +39,11 @@ Features in the notebook:
 * [**NEW**] To finetune and auto export to Ollama, try our [Ollama notebook](https://colab.research.google.com/drive/1WZDi7APtQ9VsvOrQSSC5DDtxq159j8iZ?usp=sharing)
 """
 
-from unsloth import FastLanguageModel
+from unsloth import FastModel
 import torch
 max_seq_length = 1024 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
-load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6, use 16bit LoRA (~22GB VRAM for 9B, ~56GB for 27B)
+load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6 (esp. MoE), use 16bit LoRA (~22GB VRAM for 9B, ~56GB for 27B, ~74GB for 35B-A3B)
 load_in_16bit = True
 
 # 4bit pre quantized models we support for 4x faster downloading + no OOMs.
@@ -65,12 +65,14 @@ fourbit_models = [
     "unsloth/Llama-3.2-3B-Instruct-bnb-4bit",
 ] # More models at https://huggingface.co/unsloth
 
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "Qwen/Qwen3.5-9B", # was "Qwen/Qwen3.6-27B"
+model, tokenizer = FastModel.from_pretrained( # FastModel = Unsloth's loader for MoE models
+    model_name = "Qwen/Qwen3.5-35B-A3B", # was "Qwen/Qwen3.5-9B", before that "Qwen/Qwen3.6-27B"
     max_seq_length = max_seq_length,
     dtype = dtype,
     load_in_4bit = load_in_4bit,
     load_in_16bit = load_in_16bit,
+    full_finetuning = False,
+    device_map = "balanced", # split the ~70GB bf16 weights across both 48GB GPUs
     # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
 )
 # Qwen3.6 is multimodal, so Unsloth returns a processor. We only need its text tokenizer.
@@ -78,7 +80,7 @@ tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
 
 """We now add LoRA adapters so we only need to update 1 to 10% of all parameters!"""
 
-model = FastLanguageModel.get_peft_model(
+model = FastModel.get_peft_model(
     model,
     r = 16, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
@@ -92,6 +94,13 @@ model = FastLanguageModel.get_peft_model(
     use_rslora = False,  # We support rank stabilized LoRA
     loftq_config = None, # And LoftQ
 )
+
+# Qwen3.5 MoE: 3 of every 4 layers are Gated DeltaNet (no q/k/v/o_proj) and experts may use fused weights,
+# so check which modules LoRA actually attached to.
+from collections import Counter
+_lora = Counter(n.split(".")[-2] for n, _ in model.named_modules() if n.endswith(".lora_A"))
+print("LoRA attached to:", dict(_lora))
+model.print_trainable_parameters()
 
 """<a name="Data"></a>
 ### Data Prep
@@ -306,7 +315,7 @@ Let's run the model! You can change the instruction and input - leave the output
 We use `min_p = 0.1` and `temperature = 1.5`. Read this [Tweet](https://x.com/menhguin/status/1826132708508213629) for more information on why.
 """
 
-FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
         {
@@ -330,7 +339,7 @@ tokenizer.batch_decode(outputs)
 
 """ You can also use a `TextStreamer` for continuous inference - so you can see the generation token by token, instead of waiting the whole time!"""
 
-FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
     {"role": "user", "content": "Continue the fibonnaci sequence: 1, 1, 2, 3, 5, 8,"},
@@ -370,7 +379,7 @@ if False:
         dtype = dtype,
         load_in_4bit = load_in_4bit,
     )
-    FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+    FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
     {"role": "user", "content": "Describe a tall tower in the capital of France."},
