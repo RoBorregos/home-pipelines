@@ -197,7 +197,7 @@ def load_custom_dataset(file_path):
 # dataset = load_dataset("mlabonne/FineTome-100k", split = "train")
 dataset = load_custom_dataset('../../command_generator/dataset.json')
 print(dataset)
-print(dataset['conversations'])
+# print(dataset['conversations']) # prints every row; floods the terminal with the big dataset
 
 """We now use `standardize_sharegpt` to convert ShareGPT style datasets into HuggingFace's generic format. This changes the dataset from looking like:
 ```
@@ -249,18 +249,20 @@ trainer = SFTTrainer(
     args = TrainingArguments(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
-        warmup_steps = 5,
-        num_train_epochs = 3, # Set this for 1 full training run.
-        # max_steps = 60,
+        warmup_steps = 20,
+        num_train_epochs = 1, # was 3; 1 pass over ~52.9k template commands is enough for this narrow task
+        # max_steps = 3000,   # uncomment to cap the run if the progress-bar ETA is too long
         learning_rate = 2e-4,
         fp16 = not is_bfloat16_supported(),
         bf16 = is_bfloat16_supported(),
-        logging_steps = 1,
+        logging_steps = 10,
         optim = "adamw_8bit",
         weight_decay = 0.01,
         lr_scheduler_type = "linear",
         seed = 3407,
         output_dir = "outputs",
+        save_steps = 500,       # checkpoint every 500 steps so a crash or Ctrl+C doesn't lose the run
+        save_total_limit = 3,   # keep only the last 3 checkpoints
         report_to = "none", # Use this for WandB etc
     ),
 )
@@ -292,7 +294,9 @@ max_memory = round(gpu_stats.total_memory / 1024 / 1024 / 1024, 3)
 print(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
 print(f"{start_gpu_memory} GB of memory reserved.")
 
-trainer_stats = trainer.train()
+# Resume from the latest checkpoint in outputs/ if one exists (delete outputs/ to start fresh).
+import glob
+trainer_stats = trainer.train(resume_from_checkpoint = bool(glob.glob("outputs/checkpoint-*")))
 
 #@title Show final memory and time stats
 used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
