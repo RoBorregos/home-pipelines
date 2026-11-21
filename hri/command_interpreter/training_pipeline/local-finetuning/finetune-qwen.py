@@ -39,11 +39,12 @@ Features in the notebook:
 * [**NEW**] To finetune and auto export to Ollama, try our [Ollama notebook](https://colab.research.google.com/drive/1WZDi7APtQ9VsvOrQSSC5DDtxq159j8iZ?usp=sharing)
 """
 
-from unsloth import FastLanguageModel
+from unsloth import FastModel
 import torch
 max_seq_length = 1024 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
-load_in_4bit = True # Use 4bit quantization to reduce memory usage. Can be False.
+load_in_4bit = False # Unsloth does not recommend QLoRA (4bit) for Qwen3.5/3.6 (esp. MoE), use 16bit LoRA (~22GB VRAM for 9B, ~56GB for 27B, ~74GB for 35B-A3B)
+load_in_16bit = True
 
 # 4bit pre quantized models we support for 4x faster downloading + no OOMs.
 fourbit_models = [
@@ -64,17 +65,22 @@ fourbit_models = [
     "unsloth/Llama-3.2-3B-Instruct-bnb-4bit",
 ] # More models at https://huggingface.co/unsloth
 
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/Qwen3-32B-unsloth-bnb-4bit", # or choose "unsloth/Llama-3.2-1B-Instruct"
+model, tokenizer = FastModel.from_pretrained( # FastModel = Unsloth's loader for MoE models
+    model_name = "Qwen/Qwen3.5-35B-A3B", # was "Qwen/Qwen3.5-9B", before that "Qwen/Qwen3.6-27B"
     max_seq_length = max_seq_length,
     dtype = dtype,
     load_in_4bit = load_in_4bit,
+    load_in_16bit = load_in_16bit,
+    full_finetuning = False,
+    device_map = "balanced", # split the ~70GB bf16 weights across both 48GB GPUs
     # token = "hf_...", # use one if using gated models like meta-llama/Llama-2-7b-hf
 )
+# Qwen3.6 is multimodal, so Unsloth returns a processor. We only need its text tokenizer.
+tokenizer = getattr(tokenizer, "tokenizer", tokenizer)
 
 """We now add LoRA adapters so we only need to update 1 to 10% of all parameters!"""
 
-model = FastLanguageModel.get_peft_model(
+model = FastModel.get_peft_model(
     model,
     r = 16, # Choose any number > 0 ! Suggested 8, 16, 32, 64, 128
     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
@@ -88,6 +94,13 @@ model = FastLanguageModel.get_peft_model(
     use_rslora = False,  # We support rank stabilized LoRA
     loftq_config = None, # And LoftQ
 )
+
+# Qwen3.5 MoE: 3 of every 4 layers are Gated DeltaNet (no q/k/v/o_proj) and experts may use fused weights,
+# so check which modules LoRA actually attached to.
+from collections import Counter
+_lora = Counter(n.split(".")[-2] for n, _ in model.named_modules() if n.endswith(".lora_A"))
+print("LoRA attached to:", dict(_lora))
+model.print_trainable_parameters()
 
 """<a name="Data"></a>
 ### Data Prep
@@ -106,17 +119,11 @@ I'm great thanks!<|eot_id|>
 We use our `get_chat_template` function to get the correct chat template. We support `zephyr, chatml, mistral, llama, alpaca, vicuna, vicuna_old, phi3, llama3` and more.
 """
 
-from unsloth.chat_templates import get_chat_template
-
-tokenizer = get_chat_template(
-    tokenizer,
-    chat_template = "qwen25",
-    # chat_template = "llama-3.1",
-)
-
+# Qwen3.6 ships its own chat template, so no get_chat_template. Thinking is disabled so the model
+# answers directly with the command list, same as the robot calls it.
 def formatting_prompts_func(examples):
     convos = examples["conversations"]
-    texts = [tokenizer.apply_chat_template(convo, tokenize = False, add_generation_prompt = False) for convo in convos]
+    texts = [tokenizer.apply_chat_template(convo, tokenize = False, add_generation_prompt = False, enable_thinking = False) for convo in convos]
     return { "text" : texts, }
 pass
 
@@ -188,9 +195,9 @@ def load_custom_dataset(file_path):
 
 
 # dataset = load_dataset("mlabonne/FineTome-100k", split = "train")
-dataset = load_custom_dataset('nlp-function-dataset.json')
+dataset = load_custom_dataset('../../command_generator/dataset.json')
 print(dataset)
-print(dataset['conversations'])
+# print(dataset['conversations']) # prints every row; floods the terminal with the big dataset
 
 """We now use `standardize_sharegpt` to convert ShareGPT style datasets into HuggingFace's generic format. This changes the dataset from looking like:
 ```
@@ -242,18 +249,20 @@ trainer = SFTTrainer(
     args = TrainingArguments(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
-        warmup_steps = 5,
-        num_train_epochs = 3, # Set this for 1 full training run.
-        # max_steps = 60,
+        warmup_steps = 20,
+        num_train_epochs = 1, # was 3; 1 pass over ~52.9k template commands is enough for this narrow task
+        # max_steps = 3000,   # uncomment to cap the run if the progress-bar ETA is too long
         learning_rate = 2e-4,
         fp16 = not is_bfloat16_supported(),
         bf16 = is_bfloat16_supported(),
-        logging_steps = 1,
+        logging_steps = 10,
         optim = "adamw_8bit",
         weight_decay = 0.01,
         lr_scheduler_type = "linear",
         seed = 3407,
         output_dir = "outputs",
+        save_steps = 500,       # checkpoint every 500 steps so a crash or Ctrl+C doesn't lose the run
+        save_total_limit = 3,   # keep only the last 3 checkpoints
         report_to = "none", # Use this for WandB etc
     ),
 )
@@ -285,7 +294,9 @@ max_memory = round(gpu_stats.total_memory / 1024 / 1024 / 1024, 3)
 print(f"GPU = {gpu_stats.name}. Max memory = {max_memory} GB.")
 print(f"{start_gpu_memory} GB of memory reserved.")
 
-trainer_stats = trainer.train()
+# Resume from the latest checkpoint in outputs/ if one exists (delete outputs/ to start fresh).
+import glob
+trainer_stats = trainer.train(resume_from_checkpoint = bool(glob.glob("outputs/checkpoint-*")))
 
 #@title Show final memory and time stats
 used_memory = round(torch.cuda.max_memory_reserved() / 1024 / 1024 / 1024, 3)
@@ -308,13 +319,7 @@ Let's run the model! You can change the instruction and input - leave the output
 We use `min_p = 0.1` and `temperature = 1.5`. Read this [Tweet](https://x.com/menhguin/status/1826132708508213629) for more information on why.
 """
 
-from unsloth.chat_templates import get_chat_template
-
-q = get_chat_template(
-    tokenizer,
-    chat_template = "llama-3.1",
-)
-FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
         {
@@ -327,16 +332,18 @@ inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    enable_thinking = False,
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
-outputs = model.generate(input_ids = inputs, max_new_tokens = 64, use_cache = True,
-                         temperature = 1.5, min_p = 0.1)
+outputs = model.generate(**inputs, max_new_tokens = 256, use_cache = True,
+                         temperature = 0.1)
 tokenizer.batch_decode(outputs)
 
 """ You can also use a `TextStreamer` for continuous inference - so you can see the generation token by token, instead of waiting the whole time!"""
 
-FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
     {"role": "user", "content": "Continue the fibonnaci sequence: 1, 1, 2, 3, 5, 8,"},
@@ -345,12 +352,13 @@ inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
 from transformers import TextStreamer
 text_streamer = TextStreamer(tokenizer, skip_prompt = True)
-_ = model.generate(input_ids = inputs, streamer = text_streamer, max_new_tokens = 128,
+_ = model.generate(**inputs, streamer = text_streamer, max_new_tokens = 128,
                    use_cache = True, temperature = 1.5, min_p = 0.1)
 
 """<a name="Save"></a>
@@ -375,7 +383,7 @@ if False:
         dtype = dtype,
         load_in_4bit = load_in_4bit,
     )
-    FastLanguageModel.for_inference(model) # Enable native 2x faster inference
+    FastModel.for_inference(model) # Enable native 2x faster inference
 
 messages = [
     {"role": "user", "content": "Describe a tall tower in the capital of France."},
@@ -384,12 +392,13 @@ inputs = tokenizer.apply_chat_template(
     messages,
     tokenize = True,
     add_generation_prompt = True, # Must add for generation
+    return_dict = True, # transformers 5 returns a dict (input_ids + attention_mask)
     return_tensors = "pt",
 ).to("cuda")
 
 from transformers import TextStreamer
 text_streamer = TextStreamer(tokenizer, skip_prompt = True)
-_ = model.generate(input_ids = inputs, streamer = text_streamer, max_new_tokens = 128,
+_ = model.generate(**inputs, streamer = text_streamer, max_new_tokens = 128,
                    use_cache = True, temperature = 1.5, min_p = 0.1)
 
 """You can also use Hugging Face's `AutoModelForPeftCausalLM`. Only use this if you do not have `unsloth` installed. It can be hopelessly slow, since `4bit` model downloading is not supported, and Unsloth's **inference is 2x faster**."""

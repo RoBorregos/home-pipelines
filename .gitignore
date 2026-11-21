@@ -2,3 +2,10 @@ __pycache__/
 **/.ipynb_checkpoints
 **/runs
 **/local-finetuning/model
+
+# Generated command dataset outputs
+hri/command_interpreter/command_generator/dataset.json
+hri/command_interpreter/command_generator/dataset_merged.json
+hri/command_interpreter/command_generator/final_dataset.json
+hri/command_interpreter/command_generator/dataset_paraphrased.json
+hri/command_interpreter/command_generator/batch_*.jsonl

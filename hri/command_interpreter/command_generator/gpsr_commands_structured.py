@@ -607,7 +607,7 @@ class CommandGenerator:
         elif ct == "followPrsAtLoc":
             steps.append({"action": "go_to", "location_to_go": cur_context['inRoom_atLoc'].split("the ", 1)[-1]})
             steps.append({"action": "find_person", "attribute_value": cur_context['gestPers_posePers']})
-            steps.append({"action": "follow_person_until", "destination": "canceled"})
+            steps.append({"action": "follow_person_until", "destination": "cancelled"})
         elif ct == "findObj":
             pass
             # steps.append({"action": "find_object", "area_to_search": self.find_in_context('loc_room', context, context_index-1), "object_to_find":  cur_context['obj_singCat']})
@@ -634,7 +634,7 @@ class CommandGenerator:
         elif ct == "answerQuestion":
             steps.append({"action": "answer_question"})
         elif ct == "followPrs":
-            steps.append({"action": "follow_person_until", "destination": "canceled"})
+            steps.append({"action": "follow_person_until", "destination": "cancelled"})
         elif ct == "followPrsToRoom":
             steps.append({"action": "follow_person_until", "destination": cur_context['loc2_room2']})
         elif ct == "guidePrsToBeacon":

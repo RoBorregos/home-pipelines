@@ -27,7 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python --version && pip --version
 
 
-RUN pip install unsloth
+# Qwen3.6 needs transformers v5 and a recent unsloth
+RUN pip install --upgrade unsloth unsloth_zoo "transformers>=5"
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV NVIDIA_VISIBLE_DEVICES=all
 
